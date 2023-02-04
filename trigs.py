@@ -29,9 +29,10 @@ async def main():
     #       The last step in each task is to remove itself from the list of tasks.
     #       There should also be a method 'clear' that unschedules all pending tasks.
 
-    # TODO: Discover all connected Bluetooth buttons.
+    # TODO: Discover all connected Bluetooth buttons, with cat /proc/bus/input/devices
     #  Fail gracefully if access permissions are missing.
     #  Make sure that the expected number of buttons are detected.
+    #  The following command is the right way to allow me to access the event files: sudo chgrp users /dev/input/event17
 
     # TODO: Have one central asyncio event queue. Events are dumped into that.
 
