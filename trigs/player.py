@@ -29,7 +29,7 @@ class Player:
 
         preexisting = set(self._playerctl("-l"))
         # paths = ["file://{}".format(p) for p in paths]
-        self._process = subprocess.Popen(["cvlc", "--start-paused", "--play-and-stop", *paths], text=True)
+        self._process = subprocess.Popen(["cvlc", "--start-paused", "--play-and-stop", "--no-random", "--no-loop", *paths], text=True)
         players = preexisting
         while players.issubset(preexisting):
             players = set(self._playerctl("-l"))
@@ -38,8 +38,6 @@ class Player:
         assert len(ps) == 1
         self._player_id = ps.pop()
 
-        self._playerctl("loop", "None")
-        self._playerctl("shuffle", "Off")
 
     def _playerctl(self, *args):
         """
@@ -61,7 +59,7 @@ class Player:
         The current status of this player.
         :return: A PlayerStatus object.
         """
-        ss = self._playerctl()
+        ss = self._playerctl("status")[0]
         if ss == "Playing":
             return PlayerStatus.PLAYING
         elif ss == "Paused":
@@ -69,7 +67,7 @@ class Player:
         elif ss == "Stopped":
             return PlayerStatus.STOPPED
         else:
-            raise NotImplementedError("An unexpected player status has been returned by playerctl!")
+            raise NotImplementedError("An unexpected player status has been returned by playerctl: {}".format(ss))
 
     def play(self):
         """
