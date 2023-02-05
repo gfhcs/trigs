@@ -4,12 +4,12 @@
 import argparse
 import asyncio
 
-from asynchronous import first
-from error import TrigsError
-from player import Player
-from scheduler import Scheduler
-from trigger import Trigger
-from display import Display
+from trigs.asynchronous import first
+from trigs.error import TrigsError
+from trigs.player import Player
+from trigs.scheduler import Scheduler
+from trigs.trigger import Trigger
+from trigs.display import Display
 
 # region Argument parsing
 
