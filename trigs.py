@@ -68,7 +68,7 @@ async def main():
                 # TODO: Also log events on the console!
 
     except TrigsError as te:
-        print(te.message)
+        print(str(te))
 
 
 if __name__ == '__main__':
