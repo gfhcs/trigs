@@ -1,30 +1,75 @@
 #!/usr/bin/python3
 # coding=utf8
 
+import argparse
 import asyncio
+
+from concurrent import first
+from error import TrigsError
+from player import Player
+from scheduler import Scheduler
+from trigger import Trigger
+from display import Display
+
+# region Argument parsing
+
+parser = argparse.ArgumentParser(description='Processes the input events from trigger devices to control a playlist'
+                                             'of media files.')
+
+parser.add_argument('playlist', type=str, help='The path to the playlist file that is to be controlled.')
+
+# endregion
 
 
 async def main():
 
+    args = parser.parse_args()
 
+    try:
 
+        triggers = list(Trigger.discover())
 
+        if len(triggers) < 2:
+            raise TrigsError("Fewer than 2 trigger devices have been detected!")
 
-    # TODO: Discover all connected Bluetooth buttons, with cat /proc/bus/input/devices
-    #  Fail gracefully if access permissions are missing.
-    #  Make sure that the expected number of buttons are detected.
-    #  The following command is the right way to allow me to access the event files: sudo chgrp users /dev/input/event17
+        print("CALIBRATION:")
+        forward = None
+        backward = None
 
-    # TODO: Have one central asyncio event queue. Events are dumped into that.
+        print("\tPlease trigger 'forward' once!")
+        forward = await first((t.next() for t in triggers))
+        print("\tForward triggered.")
 
-    # TODO: Go into event loop: Get an event from the queue, process it. As a first working hypothesis,
-    #       we want button 1 to start playing the next sequence, while button 2 pauses and jumps to before the
-    #       beginning of the current sequence. VLC should automatically pause after every sequence.
-    #       Every button action is signalled to the display by changing its color and scheduling
-    #       a color reset. Before the color reset is scheduler, scheduler.clear should be called.
-    #       We also want console output!
+        print("\tPlease trigger 'backward' once!")
+        backward = await first((t.next() for t in triggers))
+        print("\tBackward triggered.")
+        print("CALIBRATION COMPLETE.")
 
-    pass
+        display_scheduler = Scheduler()
+        player_scheduler = Scheduler()
+
+        with Player(paths=[args.playlist]) as player, \
+                Display() as display:
+            while True:
+
+                event = await first((forward.next(), backward.next(), display_scheduler.next(), player_scheduler.next()))
+
+                print(event)
+
+                # TODO: If it's a forward event, call player.next(). Then enqueue an event that makes us pause the
+                #  player after the duration of the sequence that is playing! This duration can probably be queried
+                #  via playerctl. Indicate on the display by flashing it green.
+
+                # TODO: If it's a backward event, call player.pause() and then player.prev() and then player.next()
+                #       Indicate on the display by flashing it red.
+
+                # TODO: Make sure that before scheduling something, we first clear the respective scheduler of previously
+                #       scheduled stuff!
+
+                # TODO: Also log events on the console!
+
+    except TrigsError as te:
+        print(te.message)
 
 
 if __name__ == '__main__':

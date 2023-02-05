@@ -8,4 +8,5 @@ class Scheduler:
     #       'create_task' and then kept around in the Scheduler, such that it is not deallocated.
     #       The last step in each task is to remove itself from the list of tasks.
     #       There should also be a method 'clear' that unschedules all pending tasks.
+    #       There should be a method async def next, that yields the next event once one is ready.
     pass
