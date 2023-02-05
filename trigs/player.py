@@ -38,7 +38,6 @@ class Player:
         assert len(ps) == 1
         self._player_id = ps.pop()
 
-
     def _playerctl(self, *args):
         """
         Executes the 'playerctl' command with the given arguments, addressing only the VLC process owned by this
