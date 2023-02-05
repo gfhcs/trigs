@@ -53,3 +53,6 @@ class Event:
         time.monotonic_ns.
         """
         return self._time_ns
+
+    def __str__(self):
+        return "Event from {}".format(self._source)

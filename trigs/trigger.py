@@ -2,7 +2,7 @@ import os.path
 
 import evdev
 
-from events import Event, unix2mono
+from .events import Event, unix2mono
 import subprocess
 
 _path_discover_shutters = "/usr/local/sbin/trigs_discover_shutters.py"
@@ -102,4 +102,5 @@ class Trigger:
             self._device.close()
             self._device = None
 
-
+    def __str__(self):
+        return "Trigger {}".format(self._device.name)

@@ -1,3 +1,5 @@
+import asyncio
+
 
 class Scheduler:
     # TODO: Have one class 'Scheduler'. Its contructor receives an event queue to fire
@@ -9,4 +11,7 @@ class Scheduler:
     #       The last step in each task is to remove itself from the list of tasks.
     #       There should also be a method 'clear' that unschedules all pending tasks.
     #       There should be a method async def next, that yields the next event once one is ready.
-    pass
+
+    async def next(self):
+        while True:
+            await asyncio.sleep(1)

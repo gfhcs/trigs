@@ -7,3 +7,13 @@ class Display:
     #  The separate process receives commands via a queue. It listens to that queue and reacts to commands.
     #
     pass
+
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
+    def close(self):
+        pass

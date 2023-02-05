@@ -12,4 +12,4 @@ async def first(awaitables):
     for p in pending:
         p.cancel()
     for d in done:
-        return d.result
+        return d.result()
