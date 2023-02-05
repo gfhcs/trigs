@@ -74,7 +74,7 @@ async def main():
                         continue
                     # Begin with the next sequence:
                     player.play()
-                    player.play()
+                    player.play() # Necessary because of the weird semantics VLC/playerctl give to 'stop'.
                     # TODO: Indicate on the display by flashing it green.
                     print("FORWARD!")
                 elif event.source is backward:
