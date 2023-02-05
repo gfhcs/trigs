@@ -33,8 +33,6 @@ async def main():
             raise TrigsError("Fewer than 2 trigger devices have been detected!")
 
         print("CALIBRATION:")
-        forward = None
-        backward = None
 
         print("\tPlease trigger 'forward' once!")
         forward = await first((t.next() for t in triggers))
@@ -43,6 +41,7 @@ async def main():
         print("\tPlease trigger 'backward' once!")
         backward = await first((t.next() for t in triggers))
         print("\tBackward triggered.")
+
         print("CALIBRATION COMPLETE.")
 
         display_scheduler = Scheduler()
