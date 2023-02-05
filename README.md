@@ -9,4 +9,6 @@ Trigs is being developed for [Thunis](https://www.thunis.eu/).
 The trigger devices supported by Trigs are tiny Bluetooth dongles, originally designed for remotely triggering the shutter of a smartphone camera (search "remote bluetooth shutter"). These dongles come in all shapes and (small) sizes, but the underlying electronics seems to often be the same. Trigs uses [evdev](https://python-evdev.readthedocs.io/en/latest/) to communicate with the triggers, as [demonstrated on YouTube](https://www.youtube.com/watch?v=ZKjA0RSlZSA).
 
 
-Trigs controls [VLC media player](https://www.videolan.org/vlc/), but should easily be portable to other media player software.
+Trigs controls [VLC media player](https://www.videolan.org/vlc/), but should easily be portable to other media player software, as it makes use of [playerctl](https://github.com/altdesktop/playerctl).
+
+For simple graphical feedback, Trigs uses [tkinter](https://docs.python.org/3/library/tkinter.html).
