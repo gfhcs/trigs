@@ -4,7 +4,7 @@
 import argparse
 import asyncio
 
-from concurrent import first
+from asynchronous import first
 from error import TrigsError
 from player import Player
 from scheduler import Scheduler
