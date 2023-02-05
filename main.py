@@ -51,13 +51,12 @@ async def main():
         print("CALIBRATION COMPLETE.")
 
         display_scheduler = Scheduler()
-        player_scheduler = Scheduler()
 
         with Player(paths=[args.playlist]) as player, \
                 Display() as display:
             while True:
 
-                event = await first((forward.next(), backward.next(), display_scheduler.next(), player_scheduler.next()))
+                event = await first((forward.next(), backward.next(), display_scheduler.next()))
 
                 # TODO: When the triggers lose connection (either distance too large or power save), we should get a
                 #       proper exception from next. We then turn the display to blue and repeat calibration.
@@ -80,9 +79,6 @@ async def main():
                 elif event.source is display_scheduler:
                     print("DISPLAY EVENT:", event)
                     # TODO: Reset the display.
-                elif event.source is player_scheduler:
-                    print("PLAYER EVENT:", event)
-                    # TODO: Pause the player and make sure we know its exact position in the playlist.
                 else:
                     print("UNKNOWN EVENT:", event)
 
