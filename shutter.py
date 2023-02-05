@@ -1,11 +1,10 @@
 #!/usr/bin/python3
 # coding=utf8
 
-from evdev import InputDevice, categorize, ecodes
+from evdev import InputDevice, ecodes
 
-if __name__ == '__main__' :
-    
-    
+if __name__ == '__main__':
+
     shutter = InputDevice('/dev/input/event17')
 
     EV_VAL_PRESSED = 1
