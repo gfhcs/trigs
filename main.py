@@ -5,11 +5,11 @@ import argparse
 import asyncio
 
 from trigs.asynchronous import first
+from trigs.display import Display
 from trigs.error import TrigsError
-from trigs.player import Player
+from trigs.player import Player, PlayerStatus
 from trigs.scheduler import Scheduler
 from trigs.trigger import Trigger
-from trigs.display import Display
 
 # region Argument parsing
 
@@ -68,14 +68,23 @@ async def main():
                 #       scheduled stuff!
 
                 if event.source is forward:
-                    # TODO: If it's a forward event, call player.next(). Then enqueue an event that makes us pause the
-                    #  player after the duration of the sequence that is playing! This duration can probably be queried
-                    #  via playerctl. Indicate on the display by flashing it green.
-                    print("forward")
+                    # If this happens while a sequence is still underway, ignore it.
+                    if player.status == PlayerStatus.PLAYING:
+                        print("IGNORED FORWARD, because sequence still playing!")
+                        continue
+                    # Begin with the next sequence:
+                    player.play()
+                    player.play()
+                    # TODO: Indicate on the display by flashing it green.
+                    print("FORWARD!")
+                    prev_trigger = forward
                 elif event.source is backward:
-                    # TODO: If it's a backward event, call player.pause() and then player.prev() and then player.next()
-                    #       Indicate on the display by flashing it red.
-                    print("backward")
+                    # The previous FORWARD was a mistake and should be undone. Since the only FORWARDS that every take
+                    # effect are those that we receive while we are paused in-between sequences, we just have to stop
+                    # playback:
+                    player.stop()
+                    # TODO:  Indicate on the display by flashing it red.
+                    print("UNDO!")
                 elif event.source is display_scheduler:
                     print("DISPLAY EVENT:", event)
                     # TODO: Reset the display.
