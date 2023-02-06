@@ -8,7 +8,6 @@ from trigs.asynchronous import first
 from trigs.display import Display
 from trigs.error import TrigsError
 from trigs.player import Player, PlayerStatus
-from trigs.scheduler import Scheduler
 from trigs.trigger import Trigger
 
 # region Argument parsing
@@ -50,23 +49,23 @@ async def main():
 
         print("CALIBRATION COMPLETE.")
 
-        display_scheduler = Scheduler()
-
         with Player(paths=[args.playlist]) as player, \
-                Display() as display:
+                Display(2) as display:
             while True:
 
-                event = await first((forward.next(), backward.next(), display_scheduler.next()))
+                try:
+                    event = await first((forward.next(), backward.next(), display.live()))
+                except:
+                    # TODO: When the triggers lose connection (either distance too large or power save), we should get a
+                    #       proper exception from next. We then turn the display to blue and repeat calibration.
+                    #       --> For this, calibration should be a dedicated procedure and it should make the left half
+                    #           of the display blue as long as the first button is not there and the right half as long as
+                    #           the second is missing.
+                    raise
 
-                # TODO: When the triggers lose connection (either distance too large or power save), we should get a
-                #       proper exception from next. We then turn the display to blue and repeat calibration.
-                #       --> For this, calibration should be a dedicated procedure and it should make the left half
-                #           of the display blue as long as the first button is not there and the right half as long as
-                #           the second is missing.
-
-                # TODO: Make sure that before scheduling something, we first clear the respective scheduler of previously
-                #       scheduled stuff!
-
+                if event.source is display:
+                    # Mere GUI update. We don't care.
+                    continue
                 if event.source is forward:
                     # If this happens while a sequence is still underway, ignore it.
                     if player.status == PlayerStatus.PLAYING:
@@ -75,7 +74,10 @@ async def main():
                     # Begin with the next sequence:
                     player.play()
                     player.play() # Necessary because of the weird semantics VLC/playerctl give to 'stop'.
-                    # TODO: Indicate on the display by flashing it green.
+
+                    display.flash(0, (0, 255, 0))
+                    display.flash(1, (0, 255, 0))
+
                     print("FORWARD!")
                 elif event.source is backward:
                     # If this happens while we are NOT playing a sequence, it probably happens while we are paused at
@@ -88,11 +90,11 @@ async def main():
                     # effect are those that we receive while we are paused in-between sequences, we just have to stop
                     # playback:
                     player.stop()
-                    # TODO:  Indicate on the display by flashing it red.
+
+                    display.flash(0, (255, 0, 0))
+                    display.flash(1, (255, 0, 0))
+
                     print("UNDO!")
-                elif event.source is display_scheduler:
-                    print("DISPLAY EVENT:", event)
-                    # TODO: Reset the display.
                 else:
                     print("UNKNOWN EVENT:", event)
 
