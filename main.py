@@ -78,7 +78,7 @@ async def main():
                     # TODO: Indicate on the display by flashing it green.
                     print("FORWARD!")
                 elif event.source is backward:
-                    # The previous FORWARD was a mistake and should be undone. Since the only FORWARDS that every take
+                    # The previous FORWARD was a mistake and should be undone. Since the only FORWARDS that ever take
                     # effect are those that we receive while we are paused in-between sequences, we just have to stop
                     # playback:
                     player.stop()
