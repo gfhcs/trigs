@@ -28,8 +28,10 @@ class Player:
         self._player_id = None
 
         preexisting = set(self._playerctl("-l"))
-        # paths = ["file://{}".format(p) for p in paths]
-        self._process = subprocess.Popen(["cvlc", "--start-paused", "--play-and-stop", "--no-random", "--no-loop", *paths], text=True)
+        self._process = subprocess.Popen(["cvlc",
+                                          "--verbose=-1",
+                                          "--start-paused", "--play-and-stop", "--no-random", "--no-loop",
+                                          *paths], text=True)
         players = preexisting
         while players.issubset(preexisting):
             players = set(self._playerctl("-l"))
