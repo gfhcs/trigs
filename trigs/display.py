@@ -87,6 +87,16 @@ class Display:
         self._window.update()
         return DisplayUpdate(self)
 
+    async def life(self, wait=1/60):
+        """
+        Calls Display.live in an infinite loop. This method is useful for creating an asyncio task that regularly
+        updates the display GUI.
+        :param wait: The number of seconds to wait in-between updates. Values that are too large will make the GUI laggy,
+                     values that are too small will needlessly burn compute power and slow down asyncio.
+        """
+        while True:
+            await self.live(wait=wait)
+
     def close(self):
         if self._window is not None:
             self._window.destroy()

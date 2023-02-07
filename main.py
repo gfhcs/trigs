@@ -8,7 +8,7 @@ from trigs.asynchronous import first
 from trigs.display import Display
 from trigs.error import TrigsError
 from trigs.player import Player, PlayerStatus
-from trigs.trigger import Trigger
+from trigs.trigger import Trigger, TriggerError
 
 # region Argument parsing
 
@@ -20,52 +20,115 @@ parser.add_argument('playlist', type=str, help='The path to the playlist file th
 # endregion
 
 
+async def calibrate(display=None, forward_uniq=None, backward_uniq=None):
+    """
+    Waits for two trigger devices to be connected and asks the user to indicate their roles.
+    :param display: The Display object that should be used issue signals during the calibration process.
+    :param forward_uniq: The unique and persistent identifier of the device that should be used for the 'forward' trigger.
+                         If this is given and connected, the user won't be asked to actively participate in calibration.
+    :param backward_uniq: The unique and persistent identifier of the device that should be used for the 'backward' trigger.
+                         If this is given and connected, the user won't be asked to actively participate in calibration.
+    :return: A pair (forward, backward) of Trigger objects.
+    """
+
+    while True:
+        triggers = []
+        print("Waiting for at least 2 trigger devices to be connected...")
+
+        if display is not None:
+            display.set_color(0, (0, 0, 255))
+            display.set_color(1, (0, 0, 255))
+
+        while len(triggers) < 2:
+            # Close previously discovered trigger objects, because they still might have devices grabbed that 'discover'
+            # would try to grab again:
+            for t in triggers:
+                t.close()
+            triggers.clear()
+
+            try:
+                triggers = list(Trigger.discover())
+            except TriggerError:
+                print("FAILED TO DISCOVER TRIGGERS. Trying again...")
+                pass
+
+            await asyncio.sleep(0.2)
+
+        print("Triggers connected!")
+
+        uniq2trig = {t.uniq: t for t in triggers}
+
+        while True:
+
+            if display is not None:
+                display.set_color(0, (0, 0, 255))
+                display.set_color(0, (0, 0, 255))
+
+            try:
+                forward = uniq2trig[forward_uniq]
+            except KeyError:
+                try:
+                    print("\tPlease trigger 'forward' once!")
+                    forward = (await first((t.next() for t in triggers))).source
+                    print("\tForward triggered.")
+                except TriggerError:
+                    print("LOST CONNECTION TO A TRIGGER DURING CALIBRATION!")
+                    break
+
+            if display is not None:
+                display.set_color(1, (255, 255, 255))
+
+            try:
+                backward = uniq2trig[backward_uniq]
+            except KeyError:
+                try:
+                    print("\tPlease trigger 'backward' once!")
+                    backward = (await first((t.next() for t in triggers))).source
+                    print("\tBackward triggered.")
+                except TriggerError:
+                    print("LOST CONNECTION TO A TRIGGER DURING CALIBRATION!")
+                    break
+
+            if display is not None:
+                display.set_color(0, (255, 255, 255))
+
+            if forward is backward:
+                print("Cannot use the same trigger for forward and backward! Please try again!")
+                continue
+
+            print("CALIBRATION COMPLETE.")
+            return forward, backward
+
+
 async def main():
 
     args = parser.parse_args()
 
     try:
 
-        triggers = list(Trigger.discover())
-
-        if len(triggers) < 2:
-            raise TrigsError("Fewer than 2 trigger devices have been detected!")
-
-        print("CALIBRATION:")
-
-        while True:
-            print("\tPlease trigger 'forward' once!")
-            forward = (await first((t.next() for t in triggers))).source
-            print("\tForward triggered.")
-
-            print("\tPlease trigger 'backward' once!")
-            backward = (await first((t.next() for t in triggers))).source
-            print("\tBackward triggered.")
-
-            if forward is backward:
-                print("Cannot use the same trigger for forward and backward! Please try again!")
-                continue
-            break
-
-        print("CALIBRATION COMPLETE.")
-
         with Player(paths=[args.playlist]) as player, \
                 Display(2) as display:
+
+            # Create an event loop for the display and keep it allocated:
+            dl = asyncio.create_task(display.life())
+
+            forward, backward = await calibrate(display=display)
+
             while True:
 
                 try:
-                    event = await first((forward.next(), backward.next(), display.live()))
-                except:
-                    # TODO: When the triggers lose connection (either distance too large or power save), we should get a
-                    #       proper exception from next. We then turn the display to blue and repeat calibration.
-                    #       --> For this, calibration should be a dedicated procedure and it should make the left half
-                    #           of the display blue as long as the first button is not there and the right half as long as
-                    #           the second is missing.
-                    raise
-
-                if event.source is display:
-                    # Mere GUI update. We don't care.
+                    event = await first((forward.next(), backward.next()))
+                except TriggerError:
+                    print("LOST CONNECTION TO AT LEAST ONE TRIGGER!")
+                    # Close the triggers, to make sure none of them remain grabbed:
+                    fu = forward.uniq
+                    bu = backward.uniq
+                    forward.close()
+                    backward.close()
+                    del forward, backward
+                    forward, backward = await calibrate(display=display, forward_uniq=fu, backward_uniq=bu)
                     continue
+
                 if event.source is forward:
                     # If this happens while a sequence is still underway, ignore it.
                     if player.status == PlayerStatus.PLAYING:
@@ -73,7 +136,7 @@ async def main():
                         continue
                     # Begin with the next sequence:
                     player.play()
-                    player.play() # Necessary because of the weird semantics VLC/playerctl give to 'stop'.
+                    player.play()  # Necessary because of the weird semantics VLC/playerctl give to 'stop'.
 
                     display.flash(0, (0, 255, 0))
                     display.flash(1, (0, 255, 0))
