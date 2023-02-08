@@ -30,7 +30,7 @@ class Player:
         preexisting = set(self._playerctl("-l"))
         self._process = subprocess.Popen(["cvlc",
                                           "--verbose=-1",
-                                          "--start-paused", "--play-and-stop", "--no-random", "--no-loop",
+                                          "--start-paused", "--play-and-pause", "--no-random", "--no-loop",
                                           *paths], text=True)
         players = preexisting
         while players.issubset(preexisting):
