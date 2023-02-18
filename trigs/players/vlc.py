@@ -1,20 +1,10 @@
 import subprocess
+from .base import Player, PlayerStatus
 
-from enum import Enum
 
-
-class PlayerStatus(Enum):
+class VLCPlayer(Player):
     """
-    The status of a media player.
-    """
-    PLAYING = 0  # Playback is active.
-    PAUSED = 1  # The player is paused.
-    STOPPED = 2  # The player is stopped.
-
-
-class Player:
-    """
-    Represents a media player that is playing a list of sequences.
+    A player based on VLC, using playerctl.
     """
 
     def __init__(self, paths):
@@ -23,7 +13,7 @@ class Player:
         :param paths: An iterable of paths to media files and/or playlists. These will form the list of sequences the
                       player is playing.
         """
-        super().__init__()
+        super().__init__(paths)
 
         self._player_id = None
 
@@ -39,6 +29,11 @@ class Player:
         ps = players - preexisting
         assert len(ps) == 1
         self._player_id = ps.pop()
+
+    def terminate(self):
+        if self._process is not None:
+            self._process.terminate()
+            self._process = None
 
     def _playerctl(self, *args):
         """
@@ -56,10 +51,6 @@ class Player:
 
     @property
     def status(self):
-        """
-        The current status of this player.
-        :return: A PlayerStatus object.
-        """
         ss = self._playerctl("status")[0]
         if ss == "Playing":
             return PlayerStatus.PLAYING
@@ -71,41 +62,22 @@ class Player:
             raise NotImplementedError("An unexpected player status has been returned by playerctl: {}".format(ss))
 
     def play(self):
-        """
-        Starts or resume playback.
-        """
         self._playerctl("play")
 
     def pause(self):
-        """
-        Pauses playback, i.e. stops it without changing the position in the sequence.
-        """
         self._playerctl("pause")
 
     def stop(self):
-        """
-        Stops playback, resetting the position in the current sequence to the start.
-        """
         self._playerctl("stop")
 
     def next(self):
-        """
-        Stops playback and jumps to the start of the next sequence.
-        """
         self._playerctl("next")
 
     def previous(self):
-        """
-        Stops playback and jumps to the start of the previous sequence.
-        """
         self._playerctl("previous")
 
     @property
     def position(self):
-        """
-        The position of the player in the current sequence, in seconds.
-        :return: A floating number representing the position in seconds.
-        """
         return float(self._playerctl("position")[0])
 
     @position.setter
@@ -114,10 +86,6 @@ class Player:
 
     @property
     def volume(self):
-        """
-        The volume at which playback happens, as a fraction of the maximum.
-        :return: A floating number representing the volume.
-        """
         return float(self._playerctl("volume")[0])
 
     @volume.setter
@@ -138,13 +106,3 @@ class Player:
             data[key] = value
         return data
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.terminate()
-
-    def terminate(self):
-        if self._process is not None:
-            self._process.terminate()
-            self._process = None

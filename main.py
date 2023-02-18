@@ -7,7 +7,7 @@ import asyncio
 from trigs.asynchronous import first
 from trigs.display import Display
 from trigs.error import TrigsError
-from trigs.player import Player, PlayerStatus
+from trigs.players.vlc import VLCPlayer, PlayerStatus
 from trigs.trigger import Trigger, TriggerError
 
 # region Argument parsing
@@ -106,7 +106,7 @@ async def main():
 
     try:
 
-        with Player(paths=[args.playlist]) as player, \
+        with VLCPlayer(paths=[args.playlist]) as player, \
                 Display(2) as display:
 
             # Create an event loop for the display and keep it allocated:
