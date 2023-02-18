@@ -3,7 +3,6 @@
 
 import argparse
 import asyncio
-import sys
 
 from trigs.asynchronous import first
 from trigs.display import Display
