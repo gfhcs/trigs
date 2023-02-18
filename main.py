@@ -151,29 +151,30 @@ async def main():
 
                 if event.source is forward:
                     # If this happens while a sequence is still underway, ignore it.
-                    if player.status == PlayerStatus.PLAYING:
+                    if await player.status == PlayerStatus.PLAYING:
                         print("IGNORED FORWARD, because sequence still playing!")
                         continue
                     # Begin with the next sequence:
-                    player.play()
-                    player.play()  # Necessary because of the weird semantics VLC/playerctl give to 'stop'.
+                    await player.play()
+                    await player.play()  # Necessary because of the weird semantics VLC/playerctl give to 'stop'.
 
                     if not args.virtual:
-                        window.flash(0, (0, 255, 0), duration=player.duration)
-                        window.flash(1, (0, 255, 0), duration=player.duration)
+                        d = await player.duration
+                        window.flash(0, (0, 255, 0), duration=d)
+                        window.flash(1, (0, 255, 0), duration=d)
 
                     print("FORWARD!")
                 elif event.source is backward:
                     # If this happens while we are NOT playing a sequence, it probably happens while we are paused at
                     # the end of a sequence we just finished. In that case we certainly do not want to jump back to the
                     # beginning:
-                    if player.status != PlayerStatus.PLAYING:
+                    if await player.status != PlayerStatus.PLAYING:
                         print("IGNORED BACKWARD, because we are already stopped!")
                         continue
                     # The previous FORWARD was a mistake and should be undone. Since the only FORWARDs that ever take
                     # effect are those that we receive while we are paused in-between sequences, we just have to stop
                     # playback:
-                    player.stop()
+                    await player.stop()
 
                     if not args.virtual:
                         window.flash(0, (255, 0, 0))

@@ -121,7 +121,7 @@ class PyAudioPlayer(Player):
         :param paths: An iterable of paths to media files and/or playlists. These will form the list of sequences the
                       player is playing.
         """
-        super().__init__(paths)
+        super().__init__()
 
         sequences = []
         sampwidth = None
@@ -189,45 +189,45 @@ class PyAudioPlayer(Player):
                 self._sidx = min(len(self._durations), self._sidx + 1)
 
     @property
-    def status(self):
+    async def status(self):
         self._detect_end()
         return self._status
 
-    def play(self):
+    async def play(self):
         self._detect_end()
-        if self.status != PlayerStatus.PLAYING:
-            self._posat = (self.position, time.monotonic())
+        if await self.status != PlayerStatus.PLAYING:
+            self._posat = (await self.position, time.monotonic())
             self._q.put((PyAudioPlayer.PlaybackCommand.PLAY, ))
             self._status = PlayerStatus.PLAYING
 
-    def pause(self):
+    async def pause(self):
         self._detect_end()
-        if self.status != PlayerStatus.PAUSED:
-            self._posat = (self.position, time.monotonic())
+        if await self.status != PlayerStatus.PAUSED:
+            self._posat = (await self.position, time.monotonic())
             self._q.put((PyAudioPlayer.PlaybackCommand.PAUSE, ))
             self._status = PlayerStatus.PAUSED
 
-    def stop(self):
+    async def stop(self):
         self._detect_end()
-        if self.status != PlayerStatus.STOPPED:
+        if await self.status != PlayerStatus.STOPPED:
             self._q.put((PyAudioPlayer.PlaybackCommand.STOP, ))
             self._posat = (0, time.monotonic())
             self._status = PlayerStatus.STOPPED
 
-    def next(self):
+    async def next(self):
         self._detect_end()
         self._posat = (0, time.monotonic())
         self._q.put((PyAudioPlayer.PlaybackCommand.NEXT, ))
         self._sidx = min(len(self._durations), self._sidx + 1)
 
-    def previous(self):
+    async def previous(self):
         self._detect_end()
         self._posat = (0, time.monotonic())
         self._q.put((PyAudioPlayer.PlaybackCommand.PREVIOUS, ))
         self._sidx = max(0, self._sidx - 1)
 
     @property
-    def position(self):
+    async def position(self):
         self._detect_end()
         pos, at = self._posat
         if self._status == PlayerStatus.PLAYING:
@@ -236,22 +236,22 @@ class PyAudioPlayer(Player):
             return pos
 
     @position.setter
-    def position(self, value):
+    async def position(self, value):
         self._detect_end()
         self._posat = (value, time.monotonic())
         self._q.put((PyAudioPlayer.PlaybackCommand.SETPOSITION, value))
 
     @property
-    def duration(self):
+    async def duration(self):
         self._detect_end()
         return self._durations[self._sidx]
 
     @property
-    def volume(self):
+    async def volume(self):
         return self._volume
 
     @volume.setter
-    def volume(self, value):
+    async def volume(self, value):
         self._q.put((PyAudioPlayer.PlaybackCommand.SETVOLUME, value))
 
     def terminate(self):

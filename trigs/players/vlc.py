@@ -13,7 +13,7 @@ class VLCPlayer(Player):
         :param paths: An iterable of paths to media files and/or playlists. These will form the list of sequences the
                       player is playing.
         """
-        super().__init__(paths)
+        super().__init__()
 
         self._player_id = None
 
@@ -50,7 +50,7 @@ class VLCPlayer(Player):
                                                         text=True, stdout=subprocess.PIPE).stdout.splitlines()]
 
     @property
-    def status(self):
+    async def status(self):
         ss = self._playerctl("status")[0]
         if ss == "Playing":
             return PlayerStatus.PLAYING
@@ -61,43 +61,43 @@ class VLCPlayer(Player):
         else:
             raise NotImplementedError("An unexpected player status has been returned by playerctl: {}".format(ss))
 
-    def play(self):
+    async def play(self):
         self._playerctl("play")
 
-    def pause(self):
+    async def pause(self):
         self._playerctl("pause")
 
-    def stop(self):
+    async def stop(self):
         self._playerctl("stop")
 
-    def next(self):
+    async def next(self):
         self._playerctl("next")
 
-    def previous(self):
+    async def previous(self):
         self._playerctl("previous")
 
     @property
-    def position(self):
+    async def position(self):
         return float(self._playerctl("position")[0])
 
     @position.setter
-    def position(self, value):
+    async def position(self, value):
         self._playerctl("position", str(value))
 
     @property
-    def duration(self):
-        return float(self.metadata['vlc:length']) / 1000
+    async def duration(self):
+        return float((await self.metadata)['vlc:length']) / 1000
 
     @property
-    def volume(self):
+    async def volume(self):
         return float(self._playerctl("volume")[0])
 
     @volume.setter
-    def volume(self, value):
+    async def volume(self, value):
         self._playerctl("volume", str(value))
 
     @property
-    def metadata(self):
+    async def metadata(self):
         """
         The metadata the player gives for the current sequence.
         :return: A dict mapping string keys to string values.
