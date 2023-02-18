@@ -8,6 +8,7 @@ class TCPConnection(Connection):
     """
 
     def __init__(self, reader, writer):
+        super().__init__()
         self._reader = reader
         self._writer = writer
 
