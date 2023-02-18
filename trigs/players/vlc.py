@@ -85,6 +85,10 @@ class VLCPlayer(Player):
         self._playerctl("position", str(value))
 
     @property
+    def duration(self):
+        return float(self.metadata['vlc:length']) / 1000
+
+    @property
     def volume(self):
         return float(self._playerctl("volume")[0])
 

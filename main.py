@@ -164,8 +164,8 @@ async def main():
                     player.play()  # Necessary because of the weird semantics VLC/playerctl give to 'stop'.
 
                     if not args.virtual:
-                        window.flash(0, (0, 255, 0))
-                        window.flash(1, (0, 255, 0))
+                        window.flash(0, (0, 255, 0), duration=player.duration)
+                        window.flash(1, (0, 255, 0), duration=player.duration)
 
                     print("FORWARD!")
                 elif event.source is backward:

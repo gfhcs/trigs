@@ -242,6 +242,11 @@ class PyAudioPlayer(Player):
         self._q.put((PyAudioPlayer.PlaybackCommand.SETPOSITION, value))
 
     @property
+    def duration(self):
+        self._detect_end()
+        return self._durations[self._sidx]
+
+    @property
     def volume(self):
         return self._volume
 

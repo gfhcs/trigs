@@ -86,6 +86,15 @@ class Player(abc.ABC):
         """
         pass
 
+    @property
+    @abc.abstractmethod
+    def duration(self):
+        """
+        The duration of the current sequence, in seconds.
+        :return: A float.
+        """
+        pass
+
     @position.setter
     @abc.abstractmethod
     def position(self, value):
