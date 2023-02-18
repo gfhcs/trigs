@@ -17,13 +17,6 @@ class Player(abc.ABC):
     """
 
     @property
-    async def paths(self):
-        """
-        An iterable of paths to media files and/or playlists. These form the list of sequences this player is playing.
-        """
-        pass
-
-    @property
     @abc.abstractmethod
     async def status(self):
         """

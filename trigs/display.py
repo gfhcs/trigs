@@ -5,16 +5,6 @@ import time
 import tkinter
 from tkinter import Tk
 
-from .events import Event
-
-
-class DisplayUpdate(Event):
-    """
-    An event that occurs immediately after a display has updated itself.
-    """
-    def __init__(self, display):
-        super().__init__(display, time.monotonic_ns())
-
 
 class Display:
     """
