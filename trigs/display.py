@@ -25,6 +25,10 @@ class Display:
         """
         Initializes a new graphical display.
         :param num_segments: The number of segments that the display is to be partitioned into.
+        :param width: The initial width of this display.
+        :param height: The initial height of this display.
+        :param title: The title of this display window.
+
         """
         super().__init__()
 
