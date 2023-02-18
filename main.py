@@ -8,7 +8,7 @@ from trigs.asynchronous import first
 from trigs.display import Display
 from trigs.error import TrigsError
 from trigs.players.vlc import VLCPlayer, PlayerStatus
-from trigs.trigger import Trigger, TriggerError
+from trigs.triggers.bluetooth import BluetoothTrigger, TriggerError
 
 # region Argument parsing
 
@@ -47,7 +47,7 @@ async def calibrate(display=None, forward_uniq=None, backward_uniq=None):
             triggers.clear()
 
             try:
-                triggers = list(Trigger.discover())
+                triggers = list(BluetoothTrigger.discover())
             except TriggerError:
                 print("FAILED TO DISCOVER TRIGGERS. Trying again...")
                 pass
