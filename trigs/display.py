@@ -1,9 +1,10 @@
 import asyncio
-import time
-import tkinter
-from tkinter import Tk, Frame, LEFT, RIGHT, BOTH
 import itertools
 import math
+import time
+import tkinter
+from tkinter import Tk
+
 from .events import Event
 
 
