@@ -8,7 +8,7 @@ import sys
 from trigs.asynchronous import first
 from trigs.display import Display
 from trigs.error import TrigsError
-from trigs.players.vlc import VLCPlayer, PlayerStatus
+from trigs.players.pyaudio import PyAudioPlayer, PlayerStatus
 from trigs.triggers.bluetooth import BluetoothTrigger, TriggerError
 from trigs.triggers.virtual import VirtualTriggerWindow
 
@@ -129,7 +129,7 @@ async def main():
 
         wl.add_done_callback(close)
 
-        with VLCPlayer(paths=[args.playlist]) as player:
+        with PyAudioPlayer(paths=[args.playlist]) as player:
 
             if args.virtual:
                 backward, forward = window.triggers
