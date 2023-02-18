@@ -3,12 +3,14 @@
 
 import argparse
 import asyncio
+import sys
 
 from trigs.asynchronous import first
 from trigs.display import Display
 from trigs.error import TrigsError
 from trigs.players.vlc import VLCPlayer, PlayerStatus
 from trigs.triggers.bluetooth import BluetoothTrigger, TriggerError
+from trigs.triggers.virtual import VirtualTriggerWindow
 
 # region Argument parsing
 
@@ -16,6 +18,11 @@ parser = argparse.ArgumentParser(description='Processes the input events from tr
                                              'of media files.')
 
 parser.add_argument('playlist', type=str, help='The path to the playlist file that is to be controlled.')
+
+parser.add_argument('--virtual', action='store_true', default=False,
+                    help='Instead of expecting bluetooth devices to be connected, show an'
+                         'array of virtual triggers that can be activated by mouse click or'
+                         'key press.')
 
 # endregion
 
@@ -104,30 +111,48 @@ async def main():
 
     args = parser.parse_args()
 
+    window = None
+    wl = None
+
     try:
+        if args.virtual:
+            window = VirtualTriggerWindow([("Stop (Key: s)", "s"), ("Next (Key: k)", "k")])
+        else:
+            window = Display(2)
 
-        with VLCPlayer(paths=[args.playlist]) as player, \
-                Display(2) as display:
+        # Create an event loop for the window and keep it allocated:
+        wl = asyncio.create_task(window.life())
 
-            # Create an event loop for the display and keep it allocated:
-            dl = asyncio.create_task(display.life())
+        def close(_):
+            print("WINDOW CLOSED, exiting...")
+            sys.exit(0)
 
-            forward, backward = await calibrate(display=display)
+        wl.add_done_callback(close)
+
+        with VLCPlayer(paths=[args.playlist]) as player:
+
+            if args.virtual:
+                backward, forward = window.triggers
+            else:
+                forward, backward = await calibrate(display=window)
 
             while True:
 
                 try:
                     event = await first((forward.next(), backward.next()))
                 except TriggerError:
-                    print("LOST CONNECTION TO AT LEAST ONE TRIGGER!")
-                    # Close the triggers, to make sure none of them remain grabbed:
-                    fu = forward.uniq
-                    bu = backward.uniq
-                    forward.close()
-                    backward.close()
-                    del forward, backward
-                    forward, backward = await calibrate(display=display, forward_uniq=fu, backward_uniq=bu)
-                    continue
+                    if args.virtual:
+                        raise Exception("Catastrophic bug!")
+                    else:
+                        print("LOST CONNECTION TO AT LEAST ONE TRIGGER!")
+                        # Close the triggers, to make sure none of them remain grabbed:
+                        fu = forward.uniq
+                        bu = backward.uniq
+                        forward.close()
+                        backward.close()
+                        del forward, backward
+                        forward, backward = await calibrate(display=window, forward_uniq=fu, backward_uniq=bu)
+                        continue
 
                 if event.source is forward:
                     # If this happens while a sequence is still underway, ignore it.
@@ -138,8 +163,9 @@ async def main():
                     player.play()
                     player.play()  # Necessary because of the weird semantics VLC/playerctl give to 'stop'.
 
-                    display.flash(0, (0, 255, 0))
-                    display.flash(1, (0, 255, 0))
+                    if not args.virtual:
+                        window.flash(0, (0, 255, 0))
+                        window.flash(1, (0, 255, 0))
 
                     print("FORWARD!")
                 elif event.source is backward:
@@ -154,8 +180,9 @@ async def main():
                     # playback:
                     player.stop()
 
-                    display.flash(0, (255, 0, 0))
-                    display.flash(1, (255, 0, 0))
+                    if not args.virtual:
+                        window.flash(0, (255, 0, 0))
+                        window.flash(1, (255, 0, 0))
 
                     print("UNDO!")
                 else:
@@ -163,6 +190,10 @@ async def main():
 
     except TrigsError as te:
         print(str(te))
+    finally:
+        if window is not None:
+            window.close()
+        wl.cancel()
 
 
 if __name__ == '__main__':

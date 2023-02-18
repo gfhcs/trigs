@@ -7,9 +7,13 @@ async def first(awaitables):
     :param awaitables: An iterable of awaitables.
     :return: The result of the first awaitable to complete.
     """
-    done, pending = await asyncio.wait([asyncio.create_task(a) for a in awaitables],
-                                       return_when=asyncio.FIRST_COMPLETED)
-    for p in pending:
-        p.cancel()
-    for d in done:
-        return d.result()
+    pending = [asyncio.create_task(a) for a in awaitables]
+    while len(pending) > 0:
+        done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+        for p in pending:
+            p.cancel()
+        for d in done:
+            if not d.cancelled():
+                return d.result()
+
+    raise asyncio.exceptions.CancelledError()
