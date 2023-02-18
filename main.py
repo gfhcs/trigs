@@ -111,23 +111,18 @@ async def main():
 
     args = parser.parse_args()
 
+    def on_window_closed():
+        for t in asyncio.all_tasks():
+            if t is not asyncio.current_task():
+                t.cancel()
+
     window = None
-    wl = None
 
     try:
         if args.virtual:
-            window = VirtualTriggerWindow([("Stop (Key: s)", "s"), ("Next (Key: k)", "k")])
+            window = VirtualTriggerWindow([("Stop (Key: s)", "s"), ("Next (Key: k)", "k")], on_close=on_window_closed)
         else:
-            window = Display(2)
-
-        # Create an event loop for the window and keep it allocated:
-        wl = asyncio.create_task(window.life())
-
-        def close(_):
-            print("WINDOW CLOSED, exiting...")
-            sys.exit(0)
-
-        wl.add_done_callback(close)
+            window = Display(2, on_close=on_window_closed)
 
         with PyAudioPlayer(paths=[args.playlist]) as player:
 
@@ -190,10 +185,11 @@ async def main():
 
     except TrigsError as te:
         print(str(te))
+    except asyncio.exceptions.CancelledError:
+        print("Exiting.")
     finally:
         if window is not None:
             window.close()
-        wl.cancel()
 
 
 if __name__ == '__main__':

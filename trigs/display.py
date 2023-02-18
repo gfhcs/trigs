@@ -22,14 +22,14 @@ class Display:
     The window does not take any input.
     """
 
-    def __init__(self, num_segments, width=1200, height=860, title="trigs"):
+    def __init__(self, num_segments, width=1200, height=860, title="trigs", on_close=None):
         """
         Initializes a new graphical display.
         :param num_segments: The number of segments that the display is to be partitioned into.
         :param width: The initial width of this display.
         :param height: The initial height of this display.
         :param title: The title of this display window.
-
+        :param on_close: The procedure to be executed when the window is closed.
         """
         super().__init__()
 
@@ -60,47 +60,32 @@ class Display:
         root.protocol("WM_DELETE_WINDOW", self.close)
 
         self._window = root
+        self._on_close = on_close
+        self._update()
+
+    def _update(self):
+        if self._window is None:
+            if self._on_close is not None:
+                self._on_close()
+        else:
+
+            # Execute pending resets:
+            t = time.monotonic_ns()
+            for sidx, reset in enumerate(list(self._resets)):
+                if reset is not None:
+                    rgb, rtime = reset
+                    if t >= rtime:
+                        self._set_color(sidx, rgb, check=False, cancel_reset=False)
+                        self._resets[sidx] = None
+
+            self._window.update()
+            asyncio.get_running_loop().call_later(1 / 60, self._update)
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
-
-    async def live(self, wait=1/60):
-        """
-        Makes the display process all outstanding GUI events.
-        This method needs to be called often, to keep the GUI responsive.
-        :param wait: The number of seconds to wait before this call actually enters the event loop. This can be useful to limit
-                     the frequency with which this method is actually executed.
-        :return: A DisplayUpdate object.
-        """
-        await asyncio.sleep(wait)
-
-        if self._window is None:
-            raise RuntimeError("The display has been closed!")
-
-        # Execute pending resets:
-        t = time.monotonic_ns()
-        for sidx, reset in enumerate(list(self._resets)):
-            if reset is not None:
-                rgb, rtime = reset
-                if t >= rtime:
-                    self._set_color(sidx, rgb, check=False, cancel_reset=False)
-                    self._resets[sidx] = None
-
-        self._window.update()
-        return DisplayUpdate(self)
-
-    async def life(self, wait=1/60):
-        """
-        Calls Display.live in an infinite loop. This method is useful for creating an asyncio task that regularly
-        updates the display GUI.
-        :param wait: The number of seconds to wait in-between updates. Values that are too large will make the GUI laggy,
-                     values that are too small will needlessly burn compute power and slow down asyncio.
-        """
-        while True:
-            await self.live(wait=wait)
 
     def close(self):
         if self._window is not None:

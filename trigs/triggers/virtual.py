@@ -72,7 +72,7 @@ class VirtualTriggerWindow:
                 f.set_exception(TriggerError("The virtual trigger was closed!"))
             self._futures.clear()
 
-    def __init__(self, lkpairs, width=1200, height=860, title="Virtual triggers"):
+    def __init__(self, lkpairs, width=1200, height=860, title="Virtual triggers", on_close=None):
         """
         Initializes a new array of virtual triggers.
         :param lkpairs: An iterable of pairs (label, k), where 'label' is a string labelling a virtual trigger and
@@ -81,6 +81,7 @@ class VirtualTriggerWindow:
         :param width: The initial width of this window.
         :param height: The initial height of this window.
         :param title: The title of this window.
+        :param on_close: The procedure to be executed when the window is closed.
         """
         super().__init__()
 
@@ -117,6 +118,16 @@ class VirtualTriggerWindow:
         root.bind("<KeyPress>", self._keydown)
 
         self._window = root
+        self._on_close = on_close
+        self._update()
+
+    def _update(self):
+        if self._window is None:
+            if self._on_close is not None:
+                self._on_close()
+        else:
+            self._window.update()
+            asyncio.get_running_loop().call_later(1 / 60, self._update)
 
     def _keydown(self, event):
         try:
@@ -133,30 +144,6 @@ class VirtualTriggerWindow:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
-
-    async def live(self, wait=1 / 60):
-        """
-        Makes the display process all outstanding GUI events.
-        This method needs to be called often, to keep the GUI responsive.
-        :param wait: The number of seconds to wait before this call actually enters the event loop. This can be useful to limit
-                     the frequency with which this method is actually executed.
-        """
-        await asyncio.sleep(wait)
-
-        if self._window is None:
-            raise RuntimeError("The virtual trigger window has been closed!")
-
-        self._window.update()
-
-    async def life(self, wait=1 / 60):
-        """
-        Calls VirtualTriggerWindow.live in an infinite loop. This method is useful for creating an asyncio task that regularly
-        updates the display GUI.
-        :param wait: The number of seconds to wait in-between updates. Values that are too large will make the GUI laggy,
-                     values that are too small will needlessly burn compute power and slow down asyncio.
-        """
-        while True:
-            await self.live(wait=wait)
 
     def close(self):
         if self._window is not None:
