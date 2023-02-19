@@ -1,14 +1,12 @@
-import glob
 import io
 import multiprocessing
-import os.path
 import queue
 import time
-import wave
 from enum import Enum
 
 import pyaudio
 
+from trigs.playlist import resolve_playlist, load_wav
 from .base import Player, PlayerStatus
 
 
@@ -128,42 +126,18 @@ class PyAudioPlayer(Player):
         nchannels = None
         framerate = None
 
-        wav_paths = []
-
-        while len(paths) > 0:
-            path = os.path.abspath(paths.pop(0))
-            if os.path.isdir(path):
-                for path in glob.glob(os.path.join(path, "*.wav")):
-                    wav_paths.append(path)
-            elif os.path.splitext(path)[-1] == ".wav":
-                wav_paths.append(path)
+        for path in resolve_playlist(paths):
+            w, c, r, data = load_wav(path)
+            if sampwidth is None and nchannels is None and framerate is None:
+                sampwidth, nchannels, framerate = w, c, r
             else:
-                raise ValueError("PyAudioPlayer supports only *.wav files and directories containing them!")
-
-        for path in sorted(wav_paths):
-
-            with wave.open(path, 'rb') as wf:
-
-                sw, nc, fr = wf.getsampwidth(), wf.getnchannels(), wf.getframerate()
-
-                if sampwidth is None and nchannels is None and framerate is None:
-                    sampwidth, nchannels, framerate = sw, nc, fr
-                else:
-                    if sw != sampwidth:
-                        raise ValueError("PyAudioPlayer requires all audio sequences to have the same sample width!")
-                    if nc != nchannels:
-                        raise ValueError("PyAudioPlayer requires all audio sequences to have the same sample width!")
-                    if fr != framerate:
-                        raise ValueError("PyAudioPlayer requires all audio sequences to have the same sample width!")
-
-                with io.BytesIO() as s:
-                    chunk_size = 41100
-                    while True:
-                        chunk = wf.readframes(chunk_size)
-                        if len(chunk) == 0:
-                            break
-                        s.write(chunk)
-                    sequences.append(s.getvalue())
+                if w != sampwidth:
+                    raise ValueError("PyAudioPlayer requires all audio sequences to have the same sample width!")
+                if c != nchannels:
+                    raise ValueError("PyAudioPlayer requires all audio sequences to have the same sample width!")
+                if r != framerate:
+                    raise ValueError("PyAudioPlayer requires all audio sequences to have the same sample width!")
+            sequences.append(data)
 
         self._q = multiprocessing.Queue()
         self._p = multiprocessing.Process(target=PyAudioPlayer._playback, args=(self._q, sequences,
