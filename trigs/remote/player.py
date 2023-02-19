@@ -23,6 +23,12 @@ class RemotePlayer(Player):
         self._ttl = ttl
         self._status_ttl = (None, None)
 
+    async def clear_sequences(self):
+        """
+        Clears the playlist of the remote player.
+        """
+        await self._client.request(RequestType.CLEAR)
+
     @property
     async def num_sequences(self):
         """
@@ -41,12 +47,15 @@ class RemotePlayer(Player):
         _, data = await self._client.request(RequestType.GETSEQUENCE, idx)
         return data
 
-    async def append_sequence(self, data):
+    async def append_sequence(self, sw, nc, fr, data):
         """
         Appends a sequence to the playlist of the remote player.
+        :param sw: The sample width of the WAV data in bytes.
+        :param nc: The number of channels of the sequence to append.
+        :param fr: The framerate of the sequence.
         :param data: A bytes object that holds the audio data of the sequence.
         """
-        await self._client.request(RequestType.APPEND, data)
+        await self._client.request(RequestType.APPENDWAV, sw, nc, fr, data)
 
     @property
     async def status(self):

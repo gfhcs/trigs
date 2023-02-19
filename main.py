@@ -5,9 +5,14 @@ import argparse
 import asyncio
 
 from trigs.asynchronous import first
+from trigs.console import begin, done
 from trigs.display import Display
 from trigs.error import TrigsError
 from trigs.players.pyaudio import PyAudioPlayer, PlayerStatus
+from trigs.playlist import resolve_playlist, load_wav
+from trigs.remote.player import RemotePlayer
+from trigs.remote.protocol import PlayerClient
+from trigs.remote.tcp import TCPConnection
 from trigs.triggers.bluetooth import BluetoothTrigger, TriggerError
 from trigs.triggers.virtual import VirtualTriggerWindow
 
@@ -121,11 +126,25 @@ async def main():
 
     window = None
     player = None
+    connection = None
 
     try:
 
         if args.remote is None:
             player = PyAudioPlayer(paths=[args.playlist])
+        else:
+            host, port = args.remote
+            begin("Connecting to {}:{}", host, port)
+            connection = TCPConnection.open_outgoing(host, int(port))
+            done()
+            player = RemotePlayer(PlayerClient(connection))
+            begin("Initializing remote playlist")
+            await player.clear_sequences()
+            for path in resolve_playlist([args.playlist]):
+                w, c, r, data = load_wav(path)
+                await player.append_sequence(w, c, r, data)
+            done()
+
         if args.virtual:
             window = VirtualTriggerWindow([("Stop (Key: s)", "s"), ("Next (Key: k)", "k")], on_close=on_window_closed)
         else:
@@ -198,6 +217,8 @@ async def main():
             window.close()
         if player is not None:
             await player.terminate()
+        if connection is not None:
+            connection.close()
 
 
 if __name__ == '__main__':

@@ -20,7 +20,8 @@ class RequestType(Enum):
     GETVOLUME = 8
     GETDURATION = 9
     GETSTATUS = 10
-    APPEND = 101
+    CLEAR = 100
+    APPENDWAV = 101
     GETNUMSEQUENCES = 102
     GETSEQUENCE = 103
     TERMINATECONNECTION = 1001
@@ -157,13 +158,13 @@ class PlayerServer:
             rt = b2c(RequestType, rt)
 
             if rt == RequestType.GETSEQUENCE:
-                t = int
-            elif rt == RequestType.APPEND:
-                t = bytes
+                ts = (int, )
+            elif rt == RequestType.APPENDWAV:
+                ts = (int, int, int, bytes)
             else:
-                t = float
+                ts = (float, )
 
-            args = [b2c(t, a) for a in args]
+            args = [b2c(t, a) for a, t in zip(args, ts)]
 
             r = PlayerServer.Request(connection, rt, *args)
             await self._requests.put(r)
