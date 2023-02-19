@@ -1,6 +1,8 @@
 import asyncio
-from enum import Enum
 import struct
+from enum import Enum
+
+from trigs.players.base import PlayerStatus
 
 
 class RequestType(Enum):
@@ -17,10 +19,11 @@ class RequestType(Enum):
     SETVOLUME = 7
     GETVOLUME = 8
     GETDURATION = 9
+    GETSTATUS = 10
     APPEND = 101
     GETNUMSEQUENCES = 102
     GETSEQUENCE = 103
-    TERMINATE = 1001
+    TERMINATECONNECTION = 1001
 
 
 class ResponseType(Enum):
@@ -38,7 +41,7 @@ def c2b(c):
     :param c: The Python object to be converted into bytes. Only certain types of objects are supported.
     :return: A bytes object.
     """
-    if isinstance(c, (RequestType, ResponseType)):
+    if isinstance(c, (RequestType, ResponseType, PlayerStatus)):
         c = int(c)
     if isinstance(c, int):
         return c.to_bytes(4, 'big')
@@ -55,7 +58,7 @@ def b2c(t, b):
     :return: An object of the given type.
     """
 
-    if t in (int, RequestType, ResponseType):
+    if t in (int, RequestType, ResponseType, PlayerStatus):
         assert len(b) == 4
         b = int.from_bytes(b, 'big')
         if t in (RequestType, ResponseType):
@@ -90,6 +93,8 @@ class PlayerClient:
         rt, *values = map(b2c, await self._connection.receive())
 
         if rt == ResponseType.SUCCESS:
+            if len(values) != 0:
+                raise IOError("The server responded with {}, but also sent values, which is a violation of the protocol!".format(rt))
             return
         elif rt == ResponseType.FORMATERROR:
             raise ValueError("The server claims that the arguments given for {}"
@@ -100,6 +105,8 @@ class PlayerClient:
                 t = int
             elif command == RequestType.GETSEQUENCE:
                 t = bytes
+            elif command == RequestType.GETSTATUS:
+                t = PlayerStatus
             else:
                 t = float
 
