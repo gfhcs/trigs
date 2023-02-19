@@ -97,5 +97,5 @@ class RemotePlayer(Player):
     async def volume(self, value):
         await self._client.request(RequestType.SETVOLUME, value)
 
-    def terminate(self):
+    async def terminate(self):
         await self._client.request(RequestType.TERMINATECONNECTION)

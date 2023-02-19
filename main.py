@@ -23,6 +23,10 @@ parser.add_argument('--virtual', action='store_true', default=False,
                          'array of virtual triggers that can be activated by mouse click or'
                          'key press.')
 
+parser.add_argument('--remote', type=str, nargs=2, help='Instead of launching a local audio player, this will make'
+                                                        'the process connect to a trigs server on a remote machine.'
+                                                        'You need to give the host name and port number for that machine!')
+
 # endregion
 
 
@@ -116,72 +120,74 @@ async def main():
                 t.cancel()
 
     window = None
+    player = None
 
     try:
+
+        if args.remote is None:
+            player = PyAudioPlayer(paths=[args.playlist])
         if args.virtual:
             window = VirtualTriggerWindow([("Stop (Key: s)", "s"), ("Next (Key: k)", "k")], on_close=on_window_closed)
         else:
             window = Display(2, on_close=on_window_closed)
 
-        with PyAudioPlayer(paths=[args.playlist]) as player:
+        if args.virtual:
+            backward, forward = window.triggers
+        else:
+            forward, backward = await calibrate(display=window)
 
-            if args.virtual:
-                backward, forward = window.triggers
-            else:
-                forward, backward = await calibrate(display=window)
+        while True:
 
-            while True:
-
-                try:
-                    event = await first((forward.next(), backward.next()))
-                except TriggerError:
-                    if args.virtual:
-                        raise
-                    else:
-                        print("LOST CONNECTION TO AT LEAST ONE TRIGGER!")
-                        # Close the triggers, to make sure none of them remain grabbed:
-                        fu = forward.uniq
-                        bu = backward.uniq
-                        forward.close()
-                        backward.close()
-                        del forward, backward
-                        forward, backward = await calibrate(display=window, forward_uniq=fu, backward_uniq=bu)
-                        continue
-
-                if event.source is forward:
-                    # If this happens while a sequence is still underway, ignore it.
-                    if await player.status == PlayerStatus.PLAYING:
-                        print("IGNORED FORWARD, because sequence still playing!")
-                        continue
-                    # Begin with the next sequence:
-                    await player.play()
-                    await player.play()  # Necessary because of the weird semantics VLC/playerctl give to 'stop'.
-
-                    if not args.virtual:
-                        d = await player.duration
-                        window.flash(0, (0, 255, 0), duration=d)
-                        window.flash(1, (0, 255, 0), duration=d)
-
-                    print("FORWARD!")
-                elif event.source is backward:
-                    # If this happens while we are NOT playing a sequence, it probably happens while we are paused at
-                    # the end of a sequence we just finished. In that case we certainly do not want to jump back to the
-                    # beginning:
-                    if await player.status != PlayerStatus.PLAYING:
-                        print("IGNORED BACKWARD, because we are already stopped!")
-                        continue
-                    # The previous FORWARD was a mistake and should be undone. Since the only FORWARDs that ever take
-                    # effect are those that we receive while we are paused in-between sequences, we just have to stop
-                    # playback:
-                    await player.stop()
-
-                    if not args.virtual:
-                        window.flash(0, (255, 0, 0))
-                        window.flash(1, (255, 0, 0))
-
-                    print("UNDO!")
+            try:
+                event = await first((forward.next(), backward.next()))
+            except TriggerError:
+                if args.virtual:
+                    raise
                 else:
-                    print("UNKNOWN EVENT:", event)
+                    print("LOST CONNECTION TO AT LEAST ONE TRIGGER!")
+                    # Close the triggers, to make sure none of them remain grabbed:
+                    fu = forward.uniq
+                    bu = backward.uniq
+                    forward.close()
+                    backward.close()
+                    del forward, backward
+                    forward, backward = await calibrate(display=window, forward_uniq=fu, backward_uniq=bu)
+                    continue
+
+            if event.source is forward:
+                # If this happens while a sequence is still underway, ignore it.
+                if await player.status == PlayerStatus.PLAYING:
+                    print("IGNORED FORWARD, because sequence still playing!")
+                    continue
+                # Begin with the next sequence:
+                await player.play()
+                await player.play()  # Necessary because of the weird semantics VLC/playerctl give to 'stop'.
+
+                if not args.virtual:
+                    d = await player.duration
+                    window.flash(0, (0, 255, 0), duration=d)
+                    window.flash(1, (0, 255, 0), duration=d)
+
+                print("FORWARD!")
+            elif event.source is backward:
+                # If this happens while we are NOT playing a sequence, it probably happens while we are paused at
+                # the end of a sequence we just finished. In that case we certainly do not want to jump back to the
+                # beginning:
+                if await player.status != PlayerStatus.PLAYING:
+                    print("IGNORED BACKWARD, because we are already stopped!")
+                    continue
+                # The previous FORWARD was a mistake and should be undone. Since the only FORWARDs that ever take
+                # effect are those that we receive while we are paused in-between sequences, we just have to stop
+                # playback:
+                await player.stop()
+
+                if not args.virtual:
+                    window.flash(0, (255, 0, 0))
+                    window.flash(1, (255, 0, 0))
+
+                print("UNDO!")
+            else:
+                print("UNKNOWN EVENT:", event)
 
     except TrigsError as te:
         print(str(te))
@@ -190,6 +196,8 @@ async def main():
     finally:
         if window is not None:
             window.close()
+        if player is not None:
+            await player.terminate()
 
 
 if __name__ == '__main__':

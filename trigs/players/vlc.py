@@ -30,7 +30,7 @@ class VLCPlayer(Player):
         assert len(ps) == 1
         self._player_id = ps.pop()
 
-    def terminate(self):
+    async def terminate(self):
         if self._process is not None:
             self._process.terminate()
             self._process = None

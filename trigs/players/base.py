@@ -97,12 +97,12 @@ class Player(abc.ABC):
     async def volume(self, value):
         pass
 
-    def __enter__(self):
+    async def __aenter__(self):
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.terminate()
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.terminate()
 
     @abc.abstractmethod
-    def terminate(self):
+    async def terminate(self):
         pass
