@@ -136,7 +136,7 @@ async def main():
                     event = await first((forward.next(), backward.next()))
                 except TriggerError:
                     if args.virtual:
-                        raise Exception("Catastrophic bug!")
+                        raise
                     else:
                         print("LOST CONNECTION TO AT LEAST ONE TRIGGER!")
                         # Close the triggers, to make sure none of them remain grabbed:
