@@ -197,6 +197,7 @@ class PlayerServer:
             try:
                 rt, *args = await connection.recv()
             except EOFError:
+                connection.close()
                 return
             rt = b2c(RequestType, rt)
 
