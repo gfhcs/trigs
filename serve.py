@@ -11,7 +11,7 @@ from trigs.error import TrigsError
 from trigs.players.pyaudio import PyAudioPlayer, PlayerStatus
 from trigs.playlist import resolve_playlist, load_wav
 from trigs.remote.player import RemotePlayer
-from trigs.remote.protocol import PlayerServer
+from trigs.remote.protocol import PlayerServer, RequestType, ResponseType, pformat
 from trigs.remote.tcp import TCPConnection
 from trigs.triggers.bluetooth import BluetoothTrigger, TriggerError
 from trigs.triggers.virtual import VirtualTriggerWindow

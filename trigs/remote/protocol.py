@@ -1,4 +1,5 @@
 import asyncio
+import io
 import struct
 from enum import Enum
 
@@ -176,6 +177,9 @@ class PlayerServer:
         def response(self):
             return self._response
 
+        def __str__(self):
+            return pformat(self._rt, *self._args)
+
     def __init__(self):
         """
         Instantiates a new server for the player protocol.
@@ -211,6 +215,7 @@ class PlayerServer:
 
             if rt == RequestType.TERMINATECONNECTION and r.response == ResponseType.SUCCESS:
                 return
+
     async def next_request(self):
         """
         Waits for a request from a client.
@@ -218,3 +223,21 @@ class PlayerServer:
         """
         return await self._requests.get()
 
+
+def pformat(rt, *args):
+    """
+    Formats a protocol message.
+    :param rt: Either a RequestType or a ResponseType.
+    :param args: The arguments that are part of the protocol message.
+    :return: A string.
+    """
+    s = io.StringIO()
+    rts = str(rt)
+    s.write(rts[rts.find(".") + 1:])
+    s.write("(")
+    prefix = ""
+    for a in args:
+        s.write(prefix)
+        s.write(str(a))
+    s.write(")")
+    return s.getvalue()
