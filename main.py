@@ -142,7 +142,7 @@ async def main():
         else:
             host, port = args.remote
             begin("Connecting to {}:{}", host, port)
-            connection = TCPConnection.open_outgoing(host, int(port))
+            connection = await TCPConnection.open_outgoing(host, int(port))
             player = RemotePlayer(PlayerClient(connection))
             done()
 

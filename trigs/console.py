@@ -7,7 +7,7 @@ def begin(msg, *fargs):
     :param msg: The message to write. This may be a format string.
     :param fargs: The arguments that should be inserted into the msg format string.
     """
-    sys.stdout.write(msg)
+    sys.stdout.write(msg.format(*fargs))
     sys.stdout.write("...")
 
 

@@ -32,24 +32,25 @@ async def main():
 
     args = parser.parse_args()
 
+    player = None
     listener = None
 
     try:
-        print("Serving for {}:{}...".format(args.host, args.port))
+        print("Serving for {}:{}...".format(args.hostname, args.port))
         server = PlayerServer()
-        listener = asyncio.create_task(TCPConnection.serve(args.host, args.port, server.serve_client))
+        listener = asyncio.create_task(TCPConnection.serve(args.hostname, args.port, server.serve_client))
 
-        with PyAudioPlayer(paths=[]) as player:
+        while True:
+            request = await server.next_request()
 
-            while True:
-                request = await server.next_request()
-
-                print("Got a request :-)")
-                return
+            print("Got a request :-)")
+            return
 
     finally:
         if listener is not None:
             listener.cancel()
+        if player is not None:
+            player.terminate()
 
 
 if __name__ == '__main__':

@@ -44,7 +44,7 @@ def c2b(c):
     :return: A bytes object.
     """
     if isinstance(c, (RequestType, ResponseType, PlayerStatus)):
-        c = int(c)
+        c = c.value
     if isinstance(c, int):
         return c.to_bytes(4, 'big')
     elif isinstance(c, float):
@@ -92,7 +92,7 @@ class PlayerClient:
         :return: A tuple (possibly of length 0), that contains the return values received for this request.
         """
         await self._connection.send(*map(c2b, (command, *args)))
-        rt, *values = map(b2c, await self._connection.receive())
+        rt, *values = map(b2c, await self._connection.recv())
 
         if rt == ResponseType.SUCCESS:
             if len(values) != 0:
