@@ -42,9 +42,22 @@ async def main():
 
         while True:
             request = await server.next_request()
+            rt = None
+            values = ()
+            try:
 
-            print("Got a request :-)")
-            return
+                if request.rtype == RequestType.TERMINATECONNECTION:
+                    rt = ResponseType.SUCCESS
+                else:
+                    raise NotImplementedError()
+
+            except:
+                rt = ResponseType.UNKNOWNERROR
+                values = ()
+            finally:
+                request.serve(rt, *values)
+                print("Request: {}".format(request))
+                print("Response: {}".format(pformat(rt, *values)))
 
     finally:
         if listener is not None:

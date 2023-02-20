@@ -35,6 +35,7 @@ class ResponseType(Enum):
     FORMATERROR = 0
     SUCCESS = 1
     VALUE = 2
+    UNKNOWNERROR = 3
 
 
 def c2b(c):
@@ -92,7 +93,9 @@ class PlayerClient:
         :return: A tuple (possibly of length 0), that contains the return values received for this request.
         """
         await self._connection.send(*map(c2b, (command, *args)))
-        rt, *values = map(b2c, await self._connection.recv())
+        rt, *values = await self._connection.recv()
+
+        rt = b2c(ResponseType, rt)
 
         if rt == ResponseType.SUCCESS:
             if len(values) != 0:
@@ -113,6 +116,8 @@ class PlayerClient:
                 t = float
 
             return b2c(t, values[0])
+        else:
+            raise IOError("The server reported an unknown error!")
 
 
 class PlayerServer:
@@ -135,7 +140,37 @@ class PlayerServer:
             self._response = asyncio.Future()
 
         def serve(self, rt, *values):
+            """
+            Provides the response and (possibly) the return values to this request. Must be called on every request
+            eventually.
+            :param rt: The ResponseType.
+            :param values: The values to send along with the response.
+            """
             self._response.set_result((rt, *values))
+
+        @property
+        def args(self):
+            """
+            The arguments for this request.
+            :return: A tuple of objects.
+            """
+            return self._args
+
+        @property
+        def rtype(self):
+            """
+            The type of this request.
+            :return: A RequestType value.
+            """
+            return self._rt
+
+        @property
+        def connection(self):
+            """
+            The connection via which this request was received.
+            :return: A Connection object.
+            """
+            return self._connection
 
         @property
         def response(self):
@@ -155,7 +190,10 @@ class PlayerServer:
         :param connection: The Connection to the client.
         """
         while True:
-            rt, *args = await connection.recv()
+            try:
+                rt, *args = await connection.recv()
+            except EOFError:
+                return
             rt = b2c(RequestType, rt)
 
             if rt == RequestType.GETSEQUENCE:
@@ -171,6 +209,8 @@ class PlayerServer:
             await self._requests.put(r)
             await connection.send(*map(c2b, await r.response))
 
+            if rt == RequestType.TERMINATECONNECTION and r.response == ResponseType.SUCCESS:
+                return
     async def next_request(self):
         """
         Waits for a request from a client.

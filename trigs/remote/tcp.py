@@ -38,12 +38,10 @@ class TCPConnection(Connection):
             await server.serve_forever()
 
     def close(self):
-        if self._reader is not None:
-            self._reader.close()
-            self._reader = None
         if self._writer is not None:
             self._writer.close()
             self._writer = None
+            self._reader = None
 
     async def send(self, cmd, *args):
         n = 1 + len(args)
@@ -57,7 +55,10 @@ class TCPConnection(Connection):
         await self._writer.drain()
 
     async def recv(self):
-        num_chunks = int.from_bytes(await self._reader.read(4), 'big')
+        bs = await self._reader.read(4)
+        if len(bs) == 0:
+            raise EOFError("The connection seems to have been closed.")
+        num_chunks = int.from_bytes(bs, 'big')
         assert num_chunks >= 1
         chunks = []
         for _ in range(num_chunks):
