@@ -16,6 +16,47 @@ class Player(abc.ABC):
     Represents a media player that is playing a list of sequences.
     """
 
+    @abc.abstractmethod
+    async def append_sequence(self, data):
+        """
+        Appends a sequence to the playlist of this player.
+        :param data: An object that encodes the sequence to add.
+        """
+        pass
+
+    @abc.abstractmethod
+    async def remove_sequence(self, sidx):
+        """
+        Removes a sequence from the playlist of this player.
+        :param sidx: The index of the sequence to remove.
+        """
+        pass
+
+    @abc.abstractmethod
+    async def clear_sequences(self):
+        """
+        Clears the playlist of this player.
+        """
+        pass
+
+    @property
+    @abc.abstractmethod
+    async def num_sequences(self):
+        """
+        The number of sequences in the playlist of this player.
+        :return: A nonnegative integer.
+        """
+        pass
+
+    @abc.abstractmethod
+    async def get_sequence(self, sidx):
+        """
+        Retrieves a sequence from the playlist of this player.
+        :param sidx: The index of the sequence to retrieve
+        :return: A representation of the sequence to retrieve.
+        """
+        pass
+
     @property
     @abc.abstractmethod
     async def status(self):
@@ -106,3 +147,5 @@ class Player(abc.ABC):
     @abc.abstractmethod
     async def terminate(self):
         pass
+
+

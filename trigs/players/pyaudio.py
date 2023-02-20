@@ -1,12 +1,8 @@
 import io
-import multiprocessing
-import queue
 import time
-from enum import Enum
 
 import pyaudio
 
-from trigs.playlist import resolve_playlist, load_wav
 from .base import Player, PlayerStatus
 
 
@@ -15,210 +11,132 @@ class PyAudioPlayer(Player):
     A player based on pyaudio.
     """
 
-    class PlaybackCommand(Enum):
+    def __init__(self, sampwidth, nchannels, framerate, interval=1/100):
         """
-        The types of commands that the playback process underlying a PyAudioPlayer can receive and implement.
-        """
-        PLAY = 0
-        PAUSE = 1
-        STOP = 2
-        NEXT = 3
-        PREVIOUS = 4
-        SETPOSITION = 5
-        SETVOLUME = 6
-        TERMINATE = 7
-
-    @staticmethod
-    def _playback(q, sequences, sampwidth, nchannels, framerate):
-        """
-        The code to be executed by a background process. The background process operates in parallel to the main
-        process.
-        :param q: The multiprocessing.QUEUE via which the background process receives commands that control playback.
-        :param sequences: An iterable of byte arrays representing the sequences to be played.
-        :param sampwidth: The width of the audio samples to play back, in bytes.
-        :param nchannels: The number of channels of the audio sequences to play back.
-        :param framerate: The number of audio frames per second to play back.
-        """
-
-        interval = 1 / 100
-
-        frames_per_buffer = int(framerate * interval)
-
-        zeros = b'\00' * (frames_per_buffer * nchannels * sampwidth)
-        data = io.BytesIO()
-
-        pa = None
-        stream = None
-        try:
-            pa = pyaudio.PyAudio()
-
-            playing = False
-            sidx = 0
-            offset = 0
-
-            def produce(_, frame_count, time_info, status):
-                nonlocal data, sidx, offset, playing
-                data.seek(0, io.SEEK_SET)
-                if playing:
-                    bs = sequences[sidx][offset:offset + frame_count * nchannels * sampwidth]
-                    offset += len(bs)
-                    if len(bs) < frame_count * nchannels * sampwidth:
-                        playing = False
-                        offset = 0
-                        sidx = min(len(sequences), sidx + 1)
-                else:
-                    bs = b''
-                data.write(bs)
-                data.write(zeros[len(bs):])
-                r = data.getvalue()
-                assert len(r) == frame_count * nchannels * sampwidth
-                return (r, pyaudio.paContinue)
-
-            stream = pa.open(format=pa.get_format_from_width(sampwidth),
-                             channels=nchannels,
-                             rate=framerate,
-                             frames_per_buffer=frames_per_buffer,
-                             stream_callback=produce,
-                             output=True)
-
-            while True:
-                try:
-                    cmd, *args = q.get(block=True)
-                except queue.Empty:
-                    continue
-
-                if cmd == PyAudioPlayer.PlaybackCommand.PLAY:
-                    playing = True
-                elif cmd == PyAudioPlayer.PlaybackCommand.PAUSE:
-                    playing = False
-                elif cmd == PyAudioPlayer.PlaybackCommand.STOP:
-                    playing = False
-                    offset = 0
-                elif cmd == PyAudioPlayer.PlaybackCommand.NEXT:
-                    sidx = min(len(sequences) - 1, sidx + 1)
-                elif cmd == PyAudioPlayer.PlaybackCommand.PREVIOUS:
-                    sidx = max(0, sidx - 1)
-                elif cmd == PyAudioPlayer.PlaybackCommand.SETPOSITION:
-                    offset = framerate * args[0]
-                elif cmd == PyAudioPlayer.PlaybackCommand.SETVOLUME:
-                    raise NotImplementedError("Cannot change the volume of a PyAudio stream!")
-                elif cmd == PyAudioPlayer.PlaybackCommand.TERMINATE:
-                    return
-                else:
-                    raise NotImplementedError(cmd)
-
-        finally:
-            if stream is not None:
-                stream.close()
-            if pa is not None:
-                pa.terminate()
-
-    def __init__(self, paths):
-        """
-        Launches a new media player. The player is paused immediately after launch.
-        :param paths: An iterable of paths to media files and/or playlists. These will form the list of sequences the
-                      player is playing.
+        Launches a new audio player based on PyAudio (and thus libportaudio).
         """
         super().__init__()
 
-        sequences = []
-        sampwidth = None
-        nchannels = None
-        framerate = None
-
-        for path in resolve_playlist(paths):
-            w, c, r, data = load_wav(path)
-            if sampwidth is None and nchannels is None and framerate is None:
-                sampwidth, nchannels, framerate = w, c, r
-            else:
-                if w != sampwidth:
-                    raise ValueError("PyAudioPlayer requires all audio sequences to have the same sample width!")
-                if c != nchannels:
-                    raise ValueError("PyAudioPlayer requires all audio sequences to have the same sample width!")
-                if r != framerate:
-                    raise ValueError("PyAudioPlayer requires all audio sequences to have the same sample width!")
-            sequences.append(data)
-
-        self._q = multiprocessing.Queue()
-        self._p = multiprocessing.Process(target=PyAudioPlayer._playback, args=(self._q, sequences,
-                                                                                sampwidth, nchannels, framerate))
-        self._p.start()
-
         self._status = PlayerStatus.STOPPED
         self._volume = 1
-        self._durations = [len(s) / (framerate * nchannels * sampwidth) for s in sequences]
+        self._sequences = []
         self._sidx = 0
-        self._posat = (0, time.monotonic())
+        self._swncfr = (sampwidth, nchannels, framerate)
+        self._offsetat = (0, time.monotonic())
+        self._pa = pyaudio.PyAudio()
+        self._buffer = io.BytesIO()
+        self._frames_per_buffer = int(framerate * interval)
 
-    def _detect_end(self):
-        """
-        This procedure checks if playback has run over the end of the current sequence,
-        in which case it must have stopped.
-        """
+        self._stream = self._pa.open(format=self._pa.get_format_from_width(sampwidth),
+                         channels=nchannels,
+                         rate=framerate,
+                         frames_per_buffer=self._frames_per_buffer,
+                         stream_callback=self._produce,
+                         output=True)
+
+    def _produce(self, _, frame_count, time_info, status):
+        now = time.monotonic()
+        sw, nc, fr = self._swncfr
+        self._buffer.seek(0, io.SEEK_SET)
+        bs = b''
+        offset, _ = self._offsetat
         if self._status == PlayerStatus.PLAYING:
-            pos, at = self._posat
-            if pos + (time.monotonic() - at) >= self._durations[self._sidx]:
+            bs = self._sequences[self._sidx][offset:offset + frame_count * nc * sw]
+            if len(bs) < frame_count * nc * sw: # We've reached the end of the current sequence!
+                # Stop playback:
                 self._status = PlayerStatus.STOPPED
-                self._posat = (0, time.monotonic())
-                self._sidx = min(len(self._durations), self._sidx + 1)
+                self._offsetat = (0, now)
+                self._sidx = min(len(self._sequences), self._sidx + 1)
+            else:
+                self._offsetat = (offset + len(bs),
+                                  now + (time_info['output_buffer_dac_time'] - time_info['current_time']))
+
+        elif self._status == PlayerStatus.STOPPED:
+            self._offsetat = (0, now)
+        elif self._status == PlayerStatus.PAUSED:
+            self.offsetat = (offset, now)
+
+        self._buffer.write(bs)
+
+        self._buffer.write(b'\00' * ((self._frames_per_buffer - len(bs)) * nc * sw))
+        r = self._buffer.getvalue()
+        assert len(r) == frame_count * nc * sw
+        return (r, pyaudio.paContinue)
+
+    async def append_sequence(self, data):
+        if len(data) != 4:
+            raise ValueError("The given sequence should be a 4-tuple holding WAV information and samples!")
+        (*swncfr, data) = data
+        if not isinstance(data, bytes):
+            raise ValueError("The last entry of the 4-tuple must be a 'bytes' object!")
+
+        if tuple(swncfr) != self._swncfr:
+            raise ValueError("The given WAV sequence has sample width {}, {} channels and framerate {}, "
+                             "but this player has initialized its audio stream "
+                             "for sample width {}, {} channels and framerate {}".format(*swncfr, *self._swncfr))
+        self._sequences.append(data)
+
+    async def remove_sequence(self, sidx):
+        if self._sidx == sidx:
+            await self.stop()
+        self._sequences.remove(sidx)
+
+    async def clear_sequences(self):
+        await self.stop()
+        self._sequences.clear()
+
+    @property
+    async def num_sequences(self):
+        return len(self._sequences)
+
+    async def get_sequence(self, sidx):
+        return self._sequences[sidx]
 
     @property
     async def status(self):
-        self._detect_end()
         return self._status
 
     async def play(self):
-        self._detect_end()
-        if await self.status != PlayerStatus.PLAYING:
-            self._posat = (await self.position, time.monotonic())
-            self._q.put((PyAudioPlayer.PlaybackCommand.PLAY, ))
-            self._status = PlayerStatus.PLAYING
+        self._status = PlayerStatus.PLAYING
+        self._offsetat = (self._offsetat[0], time.monotonic())
 
     async def pause(self):
-        self._detect_end()
-        if await self.status != PlayerStatus.PAUSED:
-            self._posat = (await self.position, time.monotonic())
-            self._q.put((PyAudioPlayer.PlaybackCommand.PAUSE, ))
-            self._status = PlayerStatus.PAUSED
+        self._status = PlayerStatus.PAUSED
+        self._offsetat = (self._offsetat[0], time.monotonic())
 
     async def stop(self):
-        self._detect_end()
-        if await self.status != PlayerStatus.STOPPED:
-            self._q.put((PyAudioPlayer.PlaybackCommand.STOP, ))
-            self._posat = (0, time.monotonic())
-            self._status = PlayerStatus.STOPPED
+        self._status = PlayerStatus.STOPPED
+        self._offsetat = (0, time.monotonic())
 
     async def next(self):
-        self._detect_end()
-        self._posat = (0, time.monotonic())
-        self._q.put((PyAudioPlayer.PlaybackCommand.NEXT, ))
-        self._sidx = min(len(self._durations), self._sidx + 1)
+        self._sidx = min(self.num_sequences - 1, self._sidx + 1)
+        self._offsetat = (0, time.monotonic())
 
     async def previous(self):
-        self._detect_end()
-        self._posat = (0, time.monotonic())
-        self._q.put((PyAudioPlayer.PlaybackCommand.PREVIOUS, ))
-        self._sidx = max(0, self._sidx - 1)
+        self._sidx = max(0, self._sidx + 1)
+        self._offsetat = (0, time.monotonic())
 
     @property
     async def position(self):
-        self._detect_end()
-        pos, at = self._posat
+        offset, at = self._offsetat
+        sw, nc, fr = self._swncfr
+        pos = offset / (sw * nc * fr)
         if self._status == PlayerStatus.PLAYING:
             return pos + (time.monotonic() - at)
         else:
             return pos
 
     @position.setter
-    async def position(self, value):
-        self._detect_end()
-        self._posat = (value, time.monotonic())
-        self._q.put((PyAudioPlayer.PlaybackCommand.SETPOSITION, value))
+    async def position(self, pos):
+        sw, nc, fr = self._swncfr
+        self._offsetat = (int(pos * fr) * (sw * nc), time.monotonic())
+        if self._status == PlayerStatus.STOPPED and self._offsetat[0] > 0:
+            self._status = PlayerStatus.PAUSED
 
     @property
     async def duration(self):
-        self._detect_end()
-        return self._durations[self._sidx]
+        sw, nc, fr = self._swncfr
+        return len(self._sequences[self._sidx]) / (sw * nc * fr)
 
     @property
     async def volume(self):
@@ -226,8 +144,12 @@ class PyAudioPlayer(Player):
 
     @volume.setter
     async def volume(self, value):
-        self._q.put((PyAudioPlayer.PlaybackCommand.SETVOLUME, value))
+        raise NotImplementedError("Cannot change the volume of a PyAudio stream!")
 
-    def terminate(self):
-        self._q.put((PyAudioPlayer.PlaybackCommand.TERMINATE, ))
-        self._p.join()
+    async def terminate(self):
+        if self._stream is not None:
+            self._stream.close()
+            self._stream = None
+        if self._pa is not None:
+            self._pa.terminate()
+            self._pa = None

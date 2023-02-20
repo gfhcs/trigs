@@ -129,21 +129,28 @@ async def main():
     connection = None
 
     try:
+        begin("Reading audio sequences")
+        sequences = [load_wav(path) for path in resolve_playlist([args.playlist])]
+        if len(sequences) == 0:
+            raise TrigsError("No usable *.wav files found!")
+        else:
+            sw, nc, fr = sequences[0][:3]
+        done()
 
         if args.remote is None:
-            player = PyAudioPlayer(paths=[args.playlist])
+            player = PyAudioPlayer(sw, nc, fr)
         else:
             host, port = args.remote
             begin("Connecting to {}:{}", host, port)
             connection = TCPConnection.open_outgoing(host, int(port))
-            done()
             player = RemotePlayer(PlayerClient(connection))
-            begin("Initializing remote playlist")
-            await player.clear_sequences()
-            for path in resolve_playlist([args.playlist]):
-                w, c, r, data = load_wav(path)
-                await player.append_sequence(w, c, r, data)
             done()
+
+        begin("Initializing playlist")
+        await player.clear_sequences()
+        for wav in sequences:
+            await player.append_sequence(wav)
+        done()
 
         if args.virtual:
             window = VirtualTriggerWindow([("Stop (Key: s)", "s"), ("Next (Key: k)", "k")], on_close=on_window_closed)

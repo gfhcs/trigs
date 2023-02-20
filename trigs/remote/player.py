@@ -24,38 +24,23 @@ class RemotePlayer(Player):
         self._status_ttl = (None, None)
 
     async def clear_sequences(self):
-        """
-        Clears the playlist of the remote player.
-        """
         await self._client.request(RequestType.CLEAR)
 
     @property
     async def num_sequences(self):
-        """
-        The number of sequences in the playlist of the remote player.
-        :return: A nonnegative integer.
-        """
         _, num_sequences = await self._client.request(RequestType.GETNUMSEQUENCES)
         return num_sequences
 
-    async def get_sequence(self, idx):
-        """
-        Downloads a sequence from the remote player.
-        :param idx: The index of the sequence to download.
-        :return: A bytes object that holds the audio data of the sequence.
-        """
-        _, data = await self._client.request(RequestType.GETSEQUENCE, idx)
+    async def get_sequence(self, sidx):
+        _, data = await self._client.request(RequestType.GETSEQUENCE, sidx)
         return data
 
-    async def append_sequence(self, sw, nc, fr, data):
-        """
-        Appends a sequence to the playlist of the remote player.
-        :param sw: The sample width of the WAV data in bytes.
-        :param nc: The number of channels of the sequence to append.
-        :param fr: The framerate of the sequence.
-        :param data: A bytes object that holds the audio data of the sequence.
-        """
+    async def append_sequence(self, wav):
+        (sw, nc, fr, data) = wav
         await self._client.request(RequestType.APPENDWAV, sw, nc, fr, data)
+
+    async def remove_sequence(self, sidx):
+        await self._client.request(RequestType.REMOVESEQUENCE, sidx)
 
     @property
     async def status(self):
@@ -107,4 +92,4 @@ class RemotePlayer(Player):
         await self._client.request(RequestType.SETVOLUME, value)
 
     async def terminate(self):
-        await self._client.request(RequestType.TERMINATECONNECTION)
+        return await self._client.request(RequestType.TERMINATECONNECTION)

@@ -30,6 +30,22 @@ class VLCPlayer(Player):
         assert len(ps) == 1
         self._player_id = ps.pop()
 
+    async def append_sequence(self, data):
+        raise NotImplementedError("append_sequence")
+
+    async def remove_sequence(self, sidx):
+        raise NotImplementedError("remove_sequence")
+
+    async def clear_sequences(self):
+        raise NotImplementedError("clear_sequences")
+
+    @property
+    async def num_sequences(self):
+        raise NotImplementedError("num_sequences")
+
+    async def get_sequence(self, sidx):
+        raise NotImplementedError("get_sequence")
+
     async def terminate(self):
         if self._process is not None:
             self._process.terminate()
