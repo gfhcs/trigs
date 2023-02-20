@@ -58,7 +58,7 @@ class TCPConnection(Connection):
 
     async def recv(self):
         num_chunks = int.from_bytes(await self._reader.read(4), 'big')
-        assert num_chunks > 1
+        assert num_chunks >= 1
         chunks = []
         for _ in range(num_chunks):
             chunk_size = int.from_bytes(await self._reader.read(4), 'big')
