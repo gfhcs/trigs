@@ -4,17 +4,9 @@
 import argparse
 import asyncio
 
-from trigs.asynchronous import first
-from trigs.console import begin, done
-from trigs.display import Display
-from trigs.error import TrigsError
-from trigs.players.pyaudio import PyAudioPlayer, PlayerStatus
-from trigs.playlist import resolve_playlist, load_wav
-from trigs.remote.player import RemotePlayer
 from trigs.remote.protocol import PlayerServer, RequestType, ResponseType, pformat
 from trigs.remote.tcp import TCPConnection
-from trigs.triggers.bluetooth import BluetoothTrigger, TriggerError
-from trigs.triggers.virtual import VirtualTriggerWindow
+from trigs.players.pyaudio import PyAudioPlayer, PlayerStatus
 
 # region Argument parsing
 
@@ -46,10 +38,42 @@ async def main():
             values = ()
             try:
 
-                if request.rtype == RequestType.TERMINATECONNECTION:
+                if request.rtype == RequestType.APPENDWAV:
+                    raise NotImplementedError(request.rtype)
+                elif request.rtype == RequestType.GETNUMSEQUENCES:
+                    raise NotImplementedError(request.rtype)
+                elif request.rtype == RequestType.GETSEQUENCE:
+                    raise NotImplementedError(request.rtype)
+                elif request.rtype == RequestType.REMOVESEQUENCE:
+                    raise NotImplementedError(request.rtype)
+                elif request.rtype == RequestType.CLEAR:
+                    raise NotImplementedError(request.rtype)
+                elif request.rtype == RequestType.GETDURATION:
+                    raise NotImplementedError(request.rtype)
+                elif request.rtype == RequestType.GETSTATUS:
+                    raise NotImplementedError(request.rtype)
+                elif request.rtype == RequestType.PLAY:
+                    raise NotImplementedError(request.rtype)
+                elif request.rtype == RequestType.PAUSE:
+                    raise NotImplementedError(request.rtype)
+                elif request.rtype == RequestType.STOP:
+                    raise NotImplementedError(request.rtype)
+                elif request.rtype == RequestType.NEXT:
+                    raise NotImplementedError(request.rtype)
+                elif request.rtype == RequestType.PREVIOUS:
+                    raise NotImplementedError(request.rtype)
+                elif request.rtype == RequestType.GETPOSITION:
+                    raise NotImplementedError(request.rtype)
+                elif request.rtype == RequestType.SETPOSITION:
+                    raise NotImplementedError(request.rtype)
+                elif request.rtype == RequestType.GETVOLUME:
+                    raise NotImplementedError(request.rtype)
+                elif request.rtype == RequestType.SETVOLUME:
+                    raise NotImplementedError(request.rtype)
+                elif request.rtype == RequestType.TERMINATECONNECTION:
                     rt = ResponseType.SUCCESS
                 else:
-                    raise NotImplementedError()
+                    raise NotImplementedError(request.rtype)
 
             except:
                 rt = ResponseType.UNKNOWNERROR
