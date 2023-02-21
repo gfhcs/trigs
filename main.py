@@ -187,7 +187,6 @@ async def main():
                     continue
                 # Begin with the next sequence:
                 await player.play()
-                await player.play()  # Necessary because of the weird semantics VLC/playerctl give to 'stop'.
 
                 if not args.virtual:
                     d = await player.duration

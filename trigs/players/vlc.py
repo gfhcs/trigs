@@ -20,7 +20,7 @@ class VLCPlayer(Player):
         preexisting = set(self._playerctl("-l"))
         self._process = subprocess.Popen(["cvlc",
                                           "--verbose=-1",
-                                          "--start-paused", "--play-and-pause", "--no-random", "--no-loop",
+                                          "--start-paused", "--no-random", "--no-loop",
                                           *paths], text=True)
         players = preexisting
         while players.issubset(preexisting):
