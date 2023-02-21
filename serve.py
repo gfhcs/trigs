@@ -119,8 +119,8 @@ async def main():
                 values = ()
             finally:
                 request.serve(rt, *values)
-                print("Request: {}".format(request))
-                print("Response: {}".format(pformat(rt, *values)))
+                print("<-- {}".format(request))
+                print("\t--> {}".format(pformat(rt, *values)))
 
     finally:
         if listener is not None:

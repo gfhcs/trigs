@@ -240,7 +240,7 @@ def pformat(rt, *args):
     s = io.StringIO()
     rts = str(rt)
     s.write(rts[rts.find(".") + 1:])
-    s.write("(")
+    s.write(": ")
     prefix = ""
     for a in args:
         s.write(prefix)
@@ -249,5 +249,4 @@ def pformat(rt, *args):
         else:
             s.write(str(a))
         prefix = ", "
-    s.write(")")
     return s.getvalue()
