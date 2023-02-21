@@ -70,9 +70,9 @@ def b2c(t, b):
     if t in (int, RequestType, ResponseType, PlayerStatus):
         assert len(b) == 4
         b = int.from_bytes(b, 'big')
-        if t in (RequestType, ResponseType):
-            return t(b)
-        return b
+        if t is int:
+            return b
+        return t(b)
     elif t is float:
         return struct.unpack('f', b)
     elif t is bytes:
@@ -110,6 +110,14 @@ class PlayerClient:
         elif rt == ResponseType.ERROR_FORMAT:
             raise ValueError("The server claims that the arguments given for {}"
                              " were of the wrong kind or number!".format(command))
+        elif rt == ResponseType.ERROR_UNKNOWN:
+            raise IOError("The server reported an unknown error!")
+        elif rt == ResponseType.ERROR_NOSEQUENCES:
+            raise RuntimeError("The remote playlist is empty!")
+        elif rt == ResponseType.ERROR_UNINITIALIZED:
+            raise RuntimeError("The remote player has not been initialized ever!")
+        elif rt == ResponseType.ERROR_NOTIMPLEMENTED:
+            raise NotImplementedError("Serving this request has not been implemented in the server!")
         elif rt == ResponseType.VALUE:
 
             if command == RequestType.GETNUMSEQUENCES:

@@ -9,7 +9,7 @@ class RemotePlayer(Player):
     Represents a player that is running on a remote machine.
     """
 
-    def __init__(self, client, ttl=1/20):
+    def __init__(self, client, ttl=1/1000):
         """
         Makes a remote player available as a local object.
         :param client: The PlayerClient object that is used to communicate with the remote player.
@@ -28,12 +28,10 @@ class RemotePlayer(Player):
 
     @property
     async def num_sequences(self):
-        _, num_sequences = await self._client.request(RequestType.GETNUMSEQUENCES)
-        return num_sequences
+        return await self._client.request(RequestType.GETNUMSEQUENCES)
 
     async def get_sequence(self, sidx):
-        _, data = await self._client.request(RequestType.GETSEQUENCE, sidx)
-        return data
+        return await self._client.request(RequestType.GETSEQUENCE, sidx)
 
     async def append_sequence(self, wav):
         (sw, nc, fr, data) = wav
@@ -44,14 +42,12 @@ class RemotePlayer(Player):
 
     @property
     async def status(self):
-        s, ts = self._status_ttl
+        _, ts = self._status_ttl
         now = time.monotonic_ns()
-
         if ts is None or now - ts > self._ttl * 10 ** 9:
-            _, s = await self._client.request(RequestType.GETSTATUS)
-            self._status_ttl = (s, now)
+            self._status_ttl = (await self._client.request(RequestType.GETSTATUS), now)
 
-        return s
+        return self._status_ttl[0]
 
     async def play(self):
         await self._client.request(RequestType.PLAY)
@@ -70,21 +66,18 @@ class RemotePlayer(Player):
 
     @property
     async def position(self):
-        _, p = await self._client.request(RequestType.GETPOSITION)
-        return p
+        return await self._client.request(RequestType.GETPOSITION)
 
     async def set_position(self, value):
         await self._client.request(RequestType.SETPOSITION, value)
 
     @property
     async def duration(self):
-        _, d = await self._client.request(RequestType.GETDURATION)
-        return d
+        return await self._client.request(RequestType.GETDURATION)
 
     @property
     async def volume(self):
-        _, v = await self._client.request(RequestType.GETVOLUME)
-        return v
+        return await self._client.request(RequestType.GETVOLUME)
 
     async def set_volume(self, value):
         await self._client.request(RequestType.SETVOLUME, value)

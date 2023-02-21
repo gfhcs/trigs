@@ -72,7 +72,7 @@ async def main():
                 if rt is not None:
                     continue
 
-                if player.num_sequences == 0:
+                if await player.num_sequences == 0:
                     rt = ResponseType.ERROR_NOSEQUENCES
                 elif request.rtype == RequestType.GETSEQUENCE:
                     sidx, = request.args
