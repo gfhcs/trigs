@@ -51,6 +51,8 @@ def c2b(c):
     if isinstance(c, (RequestType, ResponseType, PlayerStatus)):
         c = c.value
     if isinstance(c, int):
+        assert c >= 0
+        assert c.bit_length() <= 32
         return c.to_bytes(4, 'big')
     elif isinstance(c, float):
         return struct.pack('f', c)
@@ -242,6 +244,10 @@ def pformat(rt, *args):
     prefix = ""
     for a in args:
         s.write(prefix)
-        s.write(str(a))
+        if isinstance(a, bytes):
+            s.write('<bytes>')
+        else:
+            s.write(str(a))
+        prefix = ", "
     s.write(")")
     return s.getvalue()
