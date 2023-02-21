@@ -33,10 +33,13 @@ class ResponseType(Enum):
     """
     The types of responses a server can serve a request with.
     """
-    FORMATERROR = 0
-    SUCCESS = 1
-    VALUE = 2
-    UNKNOWNERROR = 3
+    SUCCESS = 0
+    VALUE = 1
+    ERROR_UNKNOWN = 2
+    ERROR_NOTIMPLEMENTED = 3
+    ERROR_FORMAT = 4
+    ERROR_UNINITIALIZED = 5
+    ERROR_NOSEQUENCES = 6
 
 
 def c2b(c):
@@ -102,7 +105,7 @@ class PlayerClient:
             if len(values) != 0:
                 raise IOError("The server responded with {}, but also sent values, which is a violation of the protocol!".format(rt))
             return
-        elif rt == ResponseType.FORMATERROR:
+        elif rt == ResponseType.ERROR_FORMAT:
             raise ValueError("The server claims that the arguments given for {}"
                              " were of the wrong kind or number!".format(command))
         elif rt == ResponseType.VALUE:

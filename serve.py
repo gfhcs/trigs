@@ -39,44 +39,81 @@ async def main():
             try:
 
                 if request.rtype == RequestType.APPENDWAV:
-                    raise NotImplementedError(request.rtype)
+                    *swncfr, _ = request.args
+                    if player is None:
+                        player = PyAudioPlayer(*swncfr)
+                    await player.append_sequence(request.args)
+                    rt = ResponseType.SUCCESS
                 elif request.rtype == RequestType.GETNUMSEQUENCES:
-                    raise NotImplementedError(request.rtype)
-                elif request.rtype == RequestType.GETSEQUENCE:
-                    raise NotImplementedError(request.rtype)
-                elif request.rtype == RequestType.REMOVESEQUENCE:
-                    raise NotImplementedError(request.rtype)
+                    values = (0, ) if player is None else (player.num_sequences, )
+                    rt = ResponseType.VALUE
                 elif request.rtype == RequestType.CLEAR:
-                    raise NotImplementedError(request.rtype)
-                elif request.rtype == RequestType.GETDURATION:
-                    raise NotImplementedError(request.rtype)
+                    if player is not None:
+                        await player.clear_sequences()
+                    rt = ResponseType.SUCCESS
                 elif request.rtype == RequestType.GETSTATUS:
-                    raise NotImplementedError(request.rtype)
-                elif request.rtype == RequestType.PLAY:
-                    raise NotImplementedError(request.rtype)
-                elif request.rtype == RequestType.PAUSE:
-                    raise NotImplementedError(request.rtype)
-                elif request.rtype == RequestType.STOP:
-                    raise NotImplementedError(request.rtype)
-                elif request.rtype == RequestType.NEXT:
-                    raise NotImplementedError(request.rtype)
-                elif request.rtype == RequestType.PREVIOUS:
-                    raise NotImplementedError(request.rtype)
-                elif request.rtype == RequestType.GETPOSITION:
-                    raise NotImplementedError(request.rtype)
-                elif request.rtype == RequestType.SETPOSITION:
-                    raise NotImplementedError(request.rtype)
+                    values = (PlayerStatus.STOPPED, ) if player is None else (await player.status, )
+                    rt = ResponseType.VALUE
+
+                if rt is not None:
+                    continue
+
+                if player is None:
+                    rt = ResponseType.ERROR_UNINITIALIZED
                 elif request.rtype == RequestType.GETVOLUME:
-                    raise NotImplementedError(request.rtype)
+                    values = (await player.volume, )
+                    rt = ResponseType.VALUE
                 elif request.rtype == RequestType.SETVOLUME:
-                    raise NotImplementedError(request.rtype)
+                    await player.set_volume(*values)
+                    rt = ResponseType.SUCCESS
+
+                if rt is not None:
+                    continue
+
+                if player.num_sequences == 0:
+                    rt = ResponseType.ERROR_NOSEQUENCES
+                elif request.rtype == RequestType.GETSEQUENCE:
+                    sidx, = request.args
+                    values = tuple(*(await player.get_sequence(sidx)))
+                    rt = ResponseType.VALUE
+                elif request.rtype == RequestType.REMOVESEQUENCE:
+                    sidx, = request.args
+                    await player.remove_sequence(sidx)
+                    rt = ResponseType.SUCCESS
+                elif request.rtype == RequestType.GETDURATION:
+                    values = (await player.duration, )
+                    rt = ResponseType.VALUE
+                elif request.rtype == RequestType.PLAY:
+                    await player.play()
+                    rt = ResponseType.SUCCESS
+                elif request.rtype == RequestType.PAUSE:
+                    await player.pause()
+                    rt = ResponseType.SUCCESS
+                elif request.rtype == RequestType.STOP:
+                    await player.stop()
+                    rt = ResponseType.SUCCESS
+                elif request.rtype == RequestType.NEXT:
+                    await player.next()
+                    rt = ResponseType.SUCCESS
+                elif request.rtype == RequestType.PREVIOUS:
+                    await player.previous()
+                    rt = ResponseType.SUCCESS
+                elif request.rtype == RequestType.GETPOSITION:
+                    values = (await player.position, )
+                    rt = ResponseType.VALUE
+                elif request.rtype == RequestType.SETPOSITION:
+                    await player.set_position(*values)
+                    rt = ResponseType.SUCCESS
                 elif request.rtype == RequestType.TERMINATECONNECTION:
                     rt = ResponseType.SUCCESS
                 else:
                     raise NotImplementedError(request.rtype)
 
+            except NotImplementedError:
+                rt = ResponseType.ERROR_NOTIMPLEMENTED
+                values = ()
             except:
-                rt = ResponseType.UNKNOWNERROR
+                rt = ResponseType.ERROR_UNKNOWN
                 values = ()
             finally:
                 request.serve(rt, *values)
