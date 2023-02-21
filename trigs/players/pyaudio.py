@@ -84,6 +84,7 @@ class PyAudioPlayer(Player):
     async def clear_sequences(self):
         await self.stop()
         self._sequences.clear()
+        self._sidx = 0
 
     @property
     async def num_sequences(self):
