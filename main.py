@@ -3,6 +3,7 @@
 
 import argparse
 import asyncio
+import time
 
 from trigs.asynchronous import first
 from trigs.console import begin, done
@@ -115,6 +116,18 @@ async def calibrate(display=None, forward_uniq=None, backward_uniq=None):
             return forward, backward
 
 
+async def measure_latency(awaitable):
+    t0 = time.monotonic_ns()
+    try:
+        return await awaitable
+    finally:
+        l = (time.monotonic_ns() - t0) / 10 ** 6
+        if l < 1:
+            print("Latency: <1ms")
+        else:
+            print("Latency: {:.1f}ms".format(l))
+
+
 async def main():
 
     args = parser.parse_args()
@@ -186,7 +199,7 @@ async def main():
                     print("IGNORED FORWARD, because sequence still playing!")
                     continue
                 # Begin with the next sequence:
-                await player.play()
+                await measure_latency(player.play())
 
                 if not args.virtual:
                     d = await player.duration
@@ -204,7 +217,7 @@ async def main():
                 # The previous FORWARD was a mistake and should be undone. Since the only FORWARDs that ever take
                 # effect are those that we receive while we are paused in-between sequences, we just have to stop
                 # playback:
-                await player.stop()
+                await measure_latency(player.stop())
 
                 if not args.virtual:
                     window.flash(0, (255, 0, 0))
