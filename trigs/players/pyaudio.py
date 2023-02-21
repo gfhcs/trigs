@@ -126,8 +126,7 @@ class PyAudioPlayer(Player):
         else:
             return pos
 
-    @position.setter
-    async def position(self, pos):
+    async def set_position(self, pos):
         sw, nc, fr = self._swncfr
         self._offsetat = (int(pos * fr) * (sw * nc), time.monotonic())
         if self._status == PlayerStatus.STOPPED and self._offsetat[0] > 0:
@@ -142,8 +141,7 @@ class PyAudioPlayer(Player):
     async def volume(self):
         return self._volume
 
-    @volume.setter
-    async def volume(self, value):
+    async def set_volume(self, value):
         raise NotImplementedError("Cannot change the volume of a PyAudio stream!")
 
     async def terminate(self):

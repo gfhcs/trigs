@@ -119,9 +119,12 @@ class Player(abc.ABC):
         """
         pass
 
-    @position.setter
     @abc.abstractmethod
     async def position(self, value):
+        """
+        Sets the position of this player in the current sequence to the given value.
+        :param value: The position to set the player to, in seconds.
+        """
         pass
 
     @property
@@ -133,9 +136,12 @@ class Player(abc.ABC):
         """
         pass
 
-    @volume.setter
     @abc.abstractmethod
-    async def volume(self, value):
+    async def set_volume(self, value):
+        """
+        Sets the volume of this player to the given value.
+        :param value: The value to set the volume to. Must be a float. 1 means 100% volume.
+        """
         pass
 
     async def __aenter__(self):

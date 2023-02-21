@@ -96,8 +96,7 @@ class VLCPlayer(Player):
     async def position(self):
         return float(self._playerctl("position")[0])
 
-    @position.setter
-    async def position(self, value):
+    async def set_position(self, value):
         self._playerctl("position", str(value))
 
     @property
@@ -108,8 +107,7 @@ class VLCPlayer(Player):
     async def volume(self):
         return float(self._playerctl("volume")[0])
 
-    @volume.setter
-    async def volume(self, value):
+    async def set_volume(self, value):
         self._playerctl("volume", str(value))
 
     @property

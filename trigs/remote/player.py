@@ -73,8 +73,7 @@ class RemotePlayer(Player):
         _, p = await self._client.request(RequestType.GETPOSITION)
         return p
 
-    @position.setter
-    async def position(self, value):
+    async def set_position(self, value):
         await self._client.request(RequestType.SETPOSITION, value)
 
     @property
@@ -87,8 +86,7 @@ class RemotePlayer(Player):
         _, v = await self._client.request(RequestType.GETVOLUME)
         return v
 
-    @volume.setter
-    async def volume(self, value):
+    async def set_volume(self, value):
         await self._client.request(RequestType.SETVOLUME, value)
 
     async def terminate(self):
