@@ -28,6 +28,8 @@ async def main():
     listener = None
 
     try:
+        print("WARNING: The communication of this server is not secure! Everyone on the network can read and manipulate "
+              "its communication! Use this server only in environments where this is not a concern!")
         print("Serving for {}:{}...".format(args.hostname, args.port))
         server = PlayerServer()
         listener = asyncio.create_task(TCPConnection.serve(args.hostname, args.port, server.serve_client))
