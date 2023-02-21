@@ -74,7 +74,7 @@ def b2c(t, b):
             return b
         return t(b)
     elif t is float:
-        return struct.unpack('f', b)
+        return struct.unpack('f', b)[0]
     elif t is bytes:
         return b
 
