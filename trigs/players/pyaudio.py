@@ -46,7 +46,7 @@ class PyAudioPlayer(Player):
                 # Stop playback:
                 self._status = PlayerStatus.STOPPED
                 self._offsetat = (0, now)
-                self._sidx = min(len(self._sequences), self._sidx + 1)
+                self._sidx = min(len(self._sequences) - 1, self._sidx + 1)
             else:
                 self._offsetat = (offset + len(bs),
                                   now + (time_info['output_buffer_dac_time'] - time_info['current_time']))
