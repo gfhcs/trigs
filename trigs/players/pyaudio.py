@@ -114,7 +114,7 @@ class PyAudioPlayer(Player):
         self._offsetat = (0, time.monotonic())
 
     async def previous(self):
-        self._sidx = max(0, self._sidx + 1)
+        self._sidx = max(0, self._sidx - 1)
         self._offsetat = (0, time.monotonic())
 
     @property
