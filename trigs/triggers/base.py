@@ -23,7 +23,18 @@ class TriggerError(Exception):
     """
     An error that occurs when a trigger device fails to wait for a new event.
     """
-    pass
+    def __init__(self, msg, trigger):
+        """
+        Creates a new TriggerError.
+        :param msg: The message for this error.
+        :param trigger: The Trigger object that caused this error.
+        """
+        super().__init__(msg)
+        self._trigger = trigger
+
+    @property
+    def trigger(self):
+        return self._trigger
 
 
 class Trigger(abc.ABC):

@@ -69,7 +69,7 @@ class VirtualTriggerWindow:
             Closes this instance.
             """
             for f in self._futures:
-                f.set_exception(TriggerError("The virtual trigger was closed!"))
+                f.set_exception(TriggerError("The virtual trigger was closed!", self))
             self._futures.clear()
 
     def __init__(self, lkpairs, width=1200, height=860, title="Virtual triggers", on_close=None):

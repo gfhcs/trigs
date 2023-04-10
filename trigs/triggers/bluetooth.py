@@ -81,9 +81,9 @@ class BluetoothTrigger(Trigger):
             try:
                 yield BluetoothTrigger(path.strip())
             except OSError as e:
-                raise TriggerError("Something wrong with the trigger device, maybe still in use...") from e
+                raise TriggerError("Something wrong with the trigger device, maybe still in use...", None) from e
             except FileNotFoundError as e:
-                raise TriggerError("A trigger that we just discovered seems to have vanished again!") from e
+                raise TriggerError("A trigger that we just discovered seems to have vanished again!", None) from e
 
     def __init__(self, device_path):
         """
@@ -129,7 +129,7 @@ class BluetoothTrigger(Trigger):
                     return TriggerEvent(self, unix2mono(event.sec * 10 ** 9 + event.usec * 10 ** 3))
         except OSError as e:  # Likely: Bluetooth connection interrupted.
             raise TriggerError("Failed to await an event, likely "
-                               "because the connection to the device was interrupted!") from e
+                               "because the connection to the device was interrupted!", self) from e
 
     def close(self):
         """

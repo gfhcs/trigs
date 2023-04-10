@@ -36,6 +36,10 @@ parser.add_argument('--remote', type=str, nargs=2, help='Instead of launching a 
 # endregion
 
 
+def log(msg):
+    print("{} {}".format(time.ctime(), msg))
+
+
 async def calibrate(display=None, forward_uniq=None, backward_uniq=None):
     """
     Waits for two trigger devices to be connected and asks the user to indicate their roles.
@@ -49,7 +53,7 @@ async def calibrate(display=None, forward_uniq=None, backward_uniq=None):
 
     while True:
         triggers = []
-        print("Waiting for at least 2 trigger devices to be connected...")
+        log("Waiting for at least 2 trigger devices to be connected...")
 
         if display is not None:
             display.set_color(0, (0, 0, 255))
@@ -65,12 +69,12 @@ async def calibrate(display=None, forward_uniq=None, backward_uniq=None):
             try:
                 triggers = list(BluetoothTrigger.discover())
             except TriggerError:
-                print("FAILED TO DISCOVER TRIGGERS. Trying again...")
+                log("FAILED TO DISCOVER TRIGGERS. Trying again...")
                 pass
 
             await asyncio.sleep(0.2)
 
-        print("Triggers connected!")
+        log("Triggers connected!")
 
         uniq2trig = {t.uniq: t for t in triggers}
 
@@ -84,11 +88,11 @@ async def calibrate(display=None, forward_uniq=None, backward_uniq=None):
                 forward = uniq2trig[forward_uniq]
             except KeyError:
                 try:
-                    print("\tPlease trigger 'forward' once!")
+                    log("\tPlease trigger 'forward' once!")
                     forward = (await first((t.next() for t in triggers))).source
-                    print("\tForward triggered.")
+                    log("\tForward triggered.")
                 except TriggerError:
-                    print("LOST CONNECTION TO A TRIGGER DURING CALIBRATION!")
+                    log("LOST CONNECTION TO A TRIGGER DURING CALIBRATION!")
                     break
 
             if display is not None:
@@ -98,21 +102,21 @@ async def calibrate(display=None, forward_uniq=None, backward_uniq=None):
                 backward = uniq2trig[backward_uniq]
             except KeyError:
                 try:
-                    print("\tPlease trigger 'backward' once!")
+                    log("\tPlease trigger 'backward' once!")
                     backward = (await first((t.next() for t in triggers))).source
-                    print("\tBackward triggered.")
+                    log("\tBackward triggered.")
                 except TriggerError:
-                    print("LOST CONNECTION TO A TRIGGER DURING CALIBRATION!")
+                    log("LOST CONNECTION TO A TRIGGER DURING CALIBRATION!")
                     break
 
             if display is not None:
                 display.set_color(0, (255, 255, 255))
 
             if forward is backward:
-                print("Cannot use the same trigger for forward and backward! Please try again!")
+                log("Cannot use the same trigger for forward and backward! Please try again!")
                 continue
 
-            print("CALIBRATION COMPLETE.")
+            log("CALIBRATION COMPLETE.")
             return forward, backward
 
 
@@ -123,9 +127,9 @@ async def measure_latency(awaitable):
     finally:
         l = (time.monotonic_ns() - t0) / 10 ** 6
         if l < 1:
-            print("Latency: <1ms")
+            log("Latency: <1ms")
         else:
-            print("Latency: {:.1f}ms".format(l))
+            log("Latency: {:.1f}ms".format(l))
 
 
 async def main():
@@ -179,11 +183,11 @@ async def main():
 
             try:
                 event = await first((forward.next(), backward.next()))
-            except TriggerError:
+            except TriggerError as te:
                 if args.virtual:
                     raise
                 else:
-                    print("LOST CONNECTION TO AT LEAST ONE TRIGGER!")
+                    log("LOST CONNECTION TO THE '{}' TRIGGER!", "FORWARD" if te.trigger is forward else "BACKWARD")
                     # Close the triggers, to make sure none of them remain grabbed:
                     fu = forward.uniq
                     bu = backward.uniq
@@ -196,7 +200,7 @@ async def main():
             if event.source is forward:
                 # If this happens while a sequence is still underway, ignore it.
                 if await player.status == PlayerStatus.PLAYING:
-                    print("IGNORED FORWARD, because sequence still playing!")
+                    log("IGNORED FORWARD, because sequence still playing!")
                     continue
                 # Begin with the next sequence:
                 await measure_latency(player.play())
@@ -206,7 +210,7 @@ async def main():
                     window.flash(0, (0, 255, 0), duration=d)
                     window.flash(1, (0, 255, 0), duration=d)
 
-                print("FORWARD!")
+                log("FORWARD!")
             elif event.source is backward:
                 if await player.status != PlayerStatus.PLAYING:
                     # If this happens while we are NOT playing a sequence, it happens while we are sitting in-between two
@@ -217,7 +221,7 @@ async def main():
                         window.flash(0, (255, 0, 0))
                         window.flash(1, (255, 0, 0))
 
-                    print("BACKWARD!")
+                    log("BACKWARD!")
                 else:
                     # The previous FORWARD was a mistake and should be undone. Since the only FORWARDs that ever take
                     # effect are those that we receive while we are paused in-between sequences, we just have to stop
@@ -228,14 +232,14 @@ async def main():
                         window.flash(0, (255, 0, 0))
                         window.flash(1, (255, 0, 0))
 
-                    print("UNDO!")
+                    log("UNDO!")
             else:
-                print("UNKNOWN EVENT:", event)
+                log("UNKNOWN EVENT:", event)
 
     except TrigsError as te:
-        print(str(te))
+        log(str(te))
     except asyncio.exceptions.CancelledError:
-        print("Exiting.")
+        log("Exiting.")
     finally:
         if window is not None:
             window.close()
