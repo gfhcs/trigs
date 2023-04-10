@@ -208,22 +208,27 @@ async def main():
 
                 print("FORWARD!")
             elif event.source is backward:
-                # If this happens while we are NOT playing a sequence, it probably happens while we are paused at
-                # the end of a sequence we just finished. In that case we certainly do not want to jump back to the
-                # beginning:
                 if await player.status != PlayerStatus.PLAYING:
-                    print("IGNORED BACKWARD, because we are already stopped!")
-                    continue
-                # The previous FORWARD was a mistake and should be undone. Since the only FORWARDs that ever take
-                # effect are those that we receive while we are paused in-between sequences, we just have to stop
-                # playback:
-                await measure_latency(player.stop())
+                    # If this happens while we are NOT playing a sequence, it happens while we are sitting in-between two
+                    # sequences. We then want to jump back to the predecessor sequence:
+                    await measure_latency(player.previous())
 
-                if not args.virtual:
-                    window.flash(0, (255, 0, 0))
-                    window.flash(1, (255, 0, 0))
+                    if not args.virtual:
+                        window.flash(0, (255, 0, 0))
+                        window.flash(1, (255, 0, 0))
 
-                print("UNDO!")
+                    print("BACKWARD!")
+                else:
+                    # The previous FORWARD was a mistake and should be undone. Since the only FORWARDs that ever take
+                    # effect are those that we receive while we are paused in-between sequences, we just have to stop
+                    # playback:
+                    await measure_latency(player.stop())
+
+                    if not args.virtual:
+                        window.flash(0, (255, 0, 0))
+                        window.flash(1, (255, 0, 0))
+
+                    print("UNDO!")
             else:
                 print("UNKNOWN EVENT:", event)
 
