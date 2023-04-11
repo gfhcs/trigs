@@ -187,7 +187,7 @@ async def main():
                 if args.virtual:
                     raise
                 else:
-                    log("LOST CONNECTION TO THE '{}' TRIGGER!", "FORWARD" if te.trigger is forward else "BACKWARD")
+                    log("LOST CONNECTION TO THE '{}' TRIGGER!".format("FORWARD" if te.trigger is forward else "BACKWARD"))
                     # Close the triggers, to make sure none of them remain grabbed:
                     fu = forward.uniq
                     bu = backward.uniq
