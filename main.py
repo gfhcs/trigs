@@ -29,6 +29,11 @@ parser.add_argument('--virtual', action='store_true', default=False,
                          'array of virtual triggers that can be activated by mouse click or'
                          'key press.')
 
+parser.add_argument('--backward_double', action='store_true', default=False,
+                    help='Specifies that the backward trigger needs to be used twice in quick succession to actually'
+                         'have an effect. This allows the backward trigger to be used occasionally to prevent it'
+                         'from going to powersave mode.')
+
 parser.add_argument('--remote', type=str, nargs=2, help='Instead of launching a local audio player, this will make'
                                                         'the process connect to a trigs server on a remote machine.'
                                                         'You need to give the host name and port number for that machine!')
@@ -147,6 +152,8 @@ async def main():
     player = None
     connection = None
 
+    backward_time = None
+
     try:
         begin("Reading audio sequences")
         sequences = [load_wav(path) for path in resolve_playlist([args.playlist])]
@@ -214,6 +221,14 @@ async def main():
 
                 log("FORWARD!")
             elif event.source is backward:
+                now = time.monotonic_ns()
+                delta = None if backward_time is None else (now - backward_time) / 10 ** 9
+                backward_time = now
+
+                if args.backward_double:
+                    if delta is None or delta > 0.5:
+                        continue
+
                 if await player.status != PlayerStatus.PLAYING:
                     # If this happens while we are NOT playing a sequence, it happens while we are sitting in-between two
                     # sequences. We then want to jump back to the predecessor sequence:
