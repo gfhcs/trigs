@@ -84,30 +84,32 @@ async def calibrate(display=None, forward_uniq=None, backward_uniq=None):
                 display.set_color(0, (0, 0, 255))
                 display.set_color(0, (0, 0, 255))
 
+            log("\tPlease trigger 'forward' once!")
             try:
                 forward = uniq2trig[forward_uniq]
+                await forward.next()
             except KeyError:
-                try:
-                    log("\tPlease trigger 'forward' once!")
-                    forward = (await first((t.next() for t in triggers))).source
-                    log("\tForward triggered.")
-                except TriggerError:
-                    log("LOST CONNECTION TO A TRIGGER DURING CALIBRATION!")
-                    break
+                forward = (await first((t.next() for t in triggers))).source
+            except TriggerError:
+                log("LOST CONNECTION TO A TRIGGER DURING CALIBRATION!")
+                break
+
+            log("\tForward triggered.")
 
             if display is not None:
                 display.set_color(1, (255, 255, 255))
 
+            log("\tPlease trigger 'backward' once!")
             try:
                 backward = uniq2trig[backward_uniq]
+                await backward.next()
             except KeyError:
-                try:
-                    log("\tPlease trigger 'backward' once!")
-                    backward = (await first((t.next() for t in triggers))).source
-                    log("\tBackward triggered.")
-                except TriggerError:
-                    log("LOST CONNECTION TO A TRIGGER DURING CALIBRATION!")
-                    break
+                backward = (await first((t.next() for t in triggers))).source
+            except TriggerError:
+                log("LOST CONNECTION TO A TRIGGER DURING CALIBRATION!")
+                break
+
+            log("\tBackward triggered.")
 
             if display is not None:
                 display.set_color(0, (255, 255, 255))
