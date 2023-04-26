@@ -65,19 +65,16 @@ async def calibrate(display=None, forward_uniq=None, backward_uniq=None):
             display.set_color(1, (0, 0, 255))
 
         while len(triggers) < 2:
-            # Close previously discovered trigger objects, because they still might have devices grabbed that 'discover'
-            # would try to grab again:
-            for t in triggers:
-                t.close()
             triggers.clear()
+
+            await asyncio.sleep(0.2)
 
             try:
                 triggers = list(BluetoothTrigger.discover())
-            except TriggerError:
-                log("FAILED TO DISCOVER TRIGGERS. Trying again...")
+            except TriggerError as te:
+                log("FAILED TO DISCOVER TRIGGERS: {}. Trying again...".format(str(te)))
                 pass
 
-            await asyncio.sleep(0.2)
 
         log("Triggers connected!")
 
@@ -90,12 +87,21 @@ async def calibrate(display=None, forward_uniq=None, backward_uniq=None):
                 display.set_color(0, (0, 0, 255))
 
             log("\tPlease trigger 'forward' once!")
+            loss = True
             try:
                 forward = uniq2trig[forward_uniq]
                 await forward.next()
+                loss = False
             except KeyError:
-                forward = (await first((t.next() for t in triggers))).source
+                try:
+                    forward = (await first((t.next() for t in triggers))).source
+                    loss = False
+                except TriggerError:
+                    pass
             except TriggerError:
+                pass
+
+            if loss:
                 log("LOST CONNECTION TO A TRIGGER DURING CALIBRATION!")
                 break
 
@@ -105,12 +111,22 @@ async def calibrate(display=None, forward_uniq=None, backward_uniq=None):
                 display.set_color(1, (255, 255, 255))
 
             log("\tPlease trigger 'backward' once!")
+            loss = True
             try:
                 backward = uniq2trig[backward_uniq]
                 await backward.next()
+                loss = False
             except KeyError:
-                backward = (await first((t.next() for t in triggers))).source
+                try:
+                    loss = True
+                    backward = (await first((t.next() for t in triggers))).source
+                    loss = False
+                except TriggerError:
+                    pass
             except TriggerError:
+                pass
+
+            if loss:
                 log("LOST CONNECTION TO A TRIGGER DURING CALIBRATION!")
                 break
 

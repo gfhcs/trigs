@@ -58,10 +58,13 @@ class BluetoothTrigger(Trigger):
     and sizes, but very often it contains the same core logic.
     """
 
+    __open = []
+
     @staticmethod
     def discover():
         """
         Discovers all currently connected trigger devices.
+        This procedure first invalidates all BluetoothTrigger instances!
         :return: An iterable of Trigger object.
         """
 
@@ -77,13 +80,25 @@ class BluetoothTrigger(Trigger):
                                   " be a rule in /etc/sudoers.d to avoid this. "
                                   "Did you run ./install.sh properly?".format(_path_discover_shutters))
 
-        for path in lines.splitlines():
-            try:
-                yield BluetoothTrigger(path.strip())
-            except OSError as e:
-                raise TriggerError("Something wrong with the trigger device, maybe still in use...", None) from e
-            except FileNotFoundError as e:
-                raise TriggerError("A trigger that we just discovered seems to have vanished again!", None) from e
+        for t in list(BluetoothTrigger.__open):
+            t.close()
+
+        discovered = []
+        try:
+            for path in lines.splitlines():
+                try:
+                    t = BluetoothTrigger(path.strip())
+                    discovered.append(t)
+                except FileNotFoundError as e:
+                    raise TriggerError("A trigger that we just discovered seems to have vanished again!", None) from e
+                except OSError as e:
+                    raise TriggerError("Something wrong with the trigger device, maybe still in use...", None) from e
+        except:
+            for d in discovered:
+                d.close()
+            raise
+
+        return discovered
 
     def __init__(self, device_path):
         """
@@ -105,6 +120,7 @@ class BluetoothTrigger(Trigger):
         super().__init__(d.uniq)
         self._device = d
         d.grab()
+        BluetoothTrigger.__open.append(self)
 
     def __enter__(self):
         return self
@@ -140,6 +156,7 @@ class BluetoothTrigger(Trigger):
             self._device = None
 
             try:
+                BluetoothTrigger.__open.remove(self)
                 d.ungrab()
                 d.close()
             except OSError:
