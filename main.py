@@ -194,6 +194,8 @@ async def main():
             await player.append_sequence(wav)
         done()
 
+        # TODO: If requested, use "pacmd list" to check here if our audio stream is on the Bluetooth box, with appropriate volume.
+
         if args.virtual:
             window = VirtualTriggerWindow([("Stop (Key: s)", "s"), ("Next (Key: k)", "k")], on_close=on_window_closed)
         else:
