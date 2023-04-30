@@ -3,6 +3,7 @@
 
 import argparse
 import asyncio
+import os
 import time
 
 from trigs.asynchronous import first
@@ -11,6 +12,7 @@ from trigs.display import Display
 from trigs.error import TrigsError
 from trigs.players.pyaudio import PyAudioPlayer, PlayerStatus
 from trigs.playlist import resolve_playlist, load_wav
+from trigs.pulsaudio import pacmdlist
 from trigs.remote.player import RemotePlayer
 from trigs.remote.protocol import PlayerClient
 from trigs.remote.tcp import TCPConnection
@@ -37,6 +39,9 @@ parser.add_argument('--backward_double', action='store_true', default=False,
 parser.add_argument('--remote', type=str, nargs=2, help='Instead of launching a local audio player, this will make'
                                                         'the process connect to a trigs server on a remote machine.'
                                                         'You need to give the host name and port number for that machine!')
+
+parser.add_argument('--check_sink', type=str, help='Makes sure that the audio from this process is sent to an audio sink with the given device description.')
+parser.add_argument('--check_volume', type=str, help='Makes sure that the sink input used by this process is at the specified volume.')
 
 # endregion
 
@@ -194,7 +199,60 @@ async def main():
             await player.append_sequence(wav)
         done()
 
-        # TODO: If requested, use "pacmd list" to check here if our audio stream is on the Bluetooth box, with appropriate volume.
+        if not args.virtual and not args.remote:
+
+            d = pacmdlist()
+
+            sink_id = None
+
+            if args.check_sink is not None:
+                sinks = next(iter(v for k, v in d.items() if "sink(s)" in k))
+
+                for s in sinks:
+                    if s["properties"]["device.description"] == "\"{}\"".format(args.check_sink):
+                        # assert s["properties"]["device.bus"] == "\"bluetooth\""
+                        if not (s["state"] == "RUNNING"):
+                            print("Audio sink is not running!")
+                            return
+                        if not (s["muted"] == "no"):
+                            print("Audio sink is muted!")
+                            return
+                        _, volume_left, _, volume_right, _ = s["volume"].split("/")
+                        if not (volume_left.strip() == volume_right.strip() == "100%"):
+                            print("Audio sink should be at volume 100%, but is not!")
+                            return
+                        sink_id = int(s["index"])
+                        break
+                if sink_id is None:
+                    print("FAILED TO FIND THE AUDIO SINK WITH THE DEVICE DESCRIPTION '{}'".format(args.check_sink))
+                    return
+
+            sink_inputs = next(iter(v for k, v in d.items() if "sink input(s)" in k))
+
+            pid = os.getpid()
+            found_sink_input = False
+            for s in sink_inputs:
+                if s["properties"]["application.process.id"] == "\"{}\"".format(pid):
+                    if not (s["state"] == "RUNNING"):
+                        print("Audio sink input is not running!")
+                        return
+                    if not (s["muted"] == "no"):
+                        print("Audio sink input is muted!")
+                        return
+                    if sink_id is not None:
+                        if not s["sink"].startswith("{} ".format(sink_id)):
+                            print("This process is sending audio to a sink other than the requested {}!!!".format(args.check_sink))
+                            return
+                    _, volume_left, _, volume_right, _ = s["volume"].split("/")
+                    if args.check_volume and not (volume_left.strip() == volume_right.strip() == "{}%".format(args.check_volume)):
+                        print("Audio sink should be at volume {}%, but is not!".format(args.check_volume))
+                        return
+                    found_sink_input = True
+                    break
+
+            if not found_sink_input:
+                print("Did not find a PulseAudio sink input for my process!")
+                return
 
         if args.virtual:
             window = VirtualTriggerWindow([("Stop (Key: s)", "s"), ("Next (Key: k)", "k")], on_close=on_window_closed)
