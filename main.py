@@ -218,8 +218,9 @@ async def main():
                             print("Audio sink is muted!")
                             return
                         _, volume_left, _, volume_right, _ = s["volume"].split("/")
-                        if not (volume_left.strip() == volume_right.strip() == "100%"):
-                            print("Audio sink should be at volume 100%, but is not!")
+                        if args.check_volume and not (
+                                volume_left.strip() == volume_right.strip() == "{}%".format(args.check_volume)):
+                            print("Audio sink should be at volume {}%, but is not!".format(args.check_volume))
                             return
                         sink_id = int(s["index"])
                         break
@@ -244,8 +245,11 @@ async def main():
                             print("This process is sending audio to a sink other than the requested {}!!!".format(args.check_sink))
                             return
                     _, volume_left, _, volume_right, _ = s["volume"].split("/")
-                    if args.check_volume and not (volume_left.strip() == volume_right.strip() == "{}%".format(args.check_volume)):
-                        print("Audio sink should be at volume {}%, but is not!".format(args.check_volume))
+                    if not (volume_left.strip() == volume_right.strip() == "100%"):
+                        print("Audio sink input of this process should be at volume 100%, but is not!")
+                        print("Waiting for 10 seconds...")
+                        time.sleep(10)
+                        print("10 seconds have elapsed, exiting.")
                         return
                     found_sink_input = True
                     break
