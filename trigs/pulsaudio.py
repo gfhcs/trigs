@@ -23,7 +23,6 @@ def pacmdlist():
     lines = iter(pacmd("list").splitlines())
 
     for line in lines:
-        print(line)
         l = line.replace("* index", "  index")
         level_new = len(l[:len(l) - len(l.lstrip())].replace("\t", "    ")) // 4
         sep = l.replace("=", ":").find(": ")
@@ -42,7 +41,7 @@ def pacmdlist():
                 dd = []
             else:
                 dd = {}
-            path[-1][l] = dd
+            path[-1][l[:-1].strip()] = dd
             path.append(dd)
             level += 1
         else:
@@ -54,7 +53,7 @@ def pacmdlist():
             if key == "index":
                 while not isinstance(path[-1], list):
                     path.pop(-1)
-                dd = {}
+                dd = {"index": value}
                 path[-1].append(dd)
                 path.append(dd)
             else:
