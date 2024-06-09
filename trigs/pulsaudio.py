@@ -23,6 +23,10 @@ def pacmdlist():
     lines = iter(pacmd("list").splitlines())
 
     for line in lines:
+
+        if "cache entrie(s) available" in line:
+            break
+
         l = line.replace("* index", "  index")
         level_new = len(l[:len(l) - len(l.lstrip())].replace("\t", "    ")) // 4
         sep = l.replace("=", ":").find(": ")
