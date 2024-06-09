@@ -233,7 +233,7 @@ async def main():
             pid = os.getpid()
             found_sink_input = False
             for s in sink_inputs:
-                if s["properties"]["application.process.id"] == "\"{}\"".format(pid):
+                if s["properties"]["application.process.id"] == f"\"{pid}\"":
                     if not (s["state"] == "RUNNING"):
                         print("Audio sink input is not running!")
                         return
