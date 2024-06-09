@@ -2,7 +2,6 @@
 # coding=utf8
 
 import subprocess
-import encodings
 
 # List input devices and their properties:
 lines = subprocess.run(['cat', '/proc/bus/input/devices'],
